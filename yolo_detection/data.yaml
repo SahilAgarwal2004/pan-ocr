@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 8
+names: ['DOB', 'Father Name', 'Name', 'PAN', 'PAN Number', 'Photo', 'QR', 'Signature']
+
+roboflow:
+  workspace: sahil-emcia
+  project: pan_ocr_detection_main
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/sahil-emcia/pan_ocr_detection_main/dataset/1

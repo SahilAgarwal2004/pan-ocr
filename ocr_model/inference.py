@@ -22,8 +22,8 @@ from postprocess import correct_ocr_errors, regex_validate
 
 
 # --- CONFIGURATION ---
-YOLO_MODEL_PATH = "yolo_detection/best.pt"  
-OCR_MODEL_PATH = "ocr_model/checkpoints/best_model.h5"  
+YOLO_MODEL_PATH = "best.pt"  
+OCR_MODEL_PATH = "checkpoints/final_model.keras"  
 CROPPED_OUTPUTS_DIR = "cropped_outputs"
 CLASSES = ['DOB', 'Father Name', 'Name', 'PAN', 'PAN Number', 'Photo', 'QR', 'Signature']
 OCR_CLASSES = ["DOB", "PAN Number", "Name", "Father Name"]  
@@ -31,7 +31,7 @@ IMG_HEIGHT = 64
 IMG_WIDTH = 256
 
 # --- CHARACTER MAPPING ---
-CHARACTERS = string.ascii_uppercase + string.digits + "/"
+CHARACTERS = string.ascii_uppercase + string.digits + "/" + " "
 NUM_TO_CHAR = {idx: char for idx, char in enumerate(CHARACTERS)}
 VOCAB_SIZE = len(CHARACTERS) + 1 
 

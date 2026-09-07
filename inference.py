@@ -22,8 +22,8 @@ from postprocess import correct_ocr_errors, regex_validate
 
 
 # --- CONFIGURATION ---
-YOLO_MODEL_PATH = "models/best.pt"  
-OCR_MODEL_PATH = "models/final_model.keras"  
+YOLO_MODEL_PATH = "models/yolo_field_detector.pt"  
+OCR_MODEL_PATH = "models/custom_ocr_model.keras"  
 CROPPED_OUTPUTS_DIR = "development/ocr_model/cropped_outputs"
 CLASSES = ['DOB', 'Father Name', 'Name', 'PAN', 'PAN Number', 'Photo', 'QR', 'Signature']
 OCR_CLASSES = ["DOB", "PAN Number", "Name", "Father Name"]  

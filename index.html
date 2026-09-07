@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VerifyIQ — Enterprise PAN Verification Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{ 
+  --bg:#f4f3ef;
+  --bg2:#eeede8;
+  --ink:#0e0e0e;
+  --ink2:#1a1a1a;
+  --card:#ffffff; 
+  --card2:#f9f8f5;
+  --border:#e0dfd9;
+  --border2:#d0cfc8;
+  --blue:#1a56f0;
+  --blue-l:#e8effe;
+  --blue-d:#0f38b5;
+  --green:#0d9c6a;
+  --green-l:#e4f7f0;
+  --red:#d93025;
+  --red-l:#fce8e6;
+  --gold:#c98a00;
+  --gold-l:#fdf3dc;
+  --ink-dim:#6b6b6b;
+  --ink-muted:#9b9b9b;
+  --sans:'Bricolage Grotesque',sans-serif;
+  --serif:'Instrument Serif',serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:12px;
+  --r-lg:20px;
+  --r-xl:28px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow:0 4px 16px rgba(0,0,0,0.07),0 1px 4px rgba(0,0,0,0.04);
+  --shadow-lg:0 16px 48px rgba(0,0,0,0.1),0 4px 12px rgba(0,0,0,0.06);
+}
+
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:100px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-muted)}
+
+/* ══════════════════════════
+   NAV
+══════════════════════════ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  height:60px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;
+  background:rgba(244,243,239,0.88);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  transition:all 0.3s;
+}
+
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;
+  font-size:1.05rem;font-weight:800;color:var(--ink);
+  letter-spacing:-0.02em;
+}
+
+.logo-sq{
+  width:30px;height:30px;
+  background:var(--ink);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:0.78rem;font-weight:800;
+  letter-spacing:-0.02em;
+}
+
+.nav-center{display:flex;align-items:center;gap:2px}
+.nav-item{
+  padding:6px 14px;border-radius:8px;
+  font-size:0.82rem;font-weight:600;color:var(--ink-dim);
+  cursor:pointer;transition:all 0.15s;text-decoration:none;border:none;background:none;font-family:var(--sans);
+}
+.nav-item:hover{background:var(--bg2);color:var(--ink)}
+.nav-item.active{background:var(--ink);color:#fff}
+
+.nav-right{display:flex;align-items:center;gap:10px}
+
+.status-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:100px;
+  font-size:0.7rem;font-weight:700;letter-spacing:0.04em;
+  cursor:pointer;transition:all 0.2s;
+  background:var(--green-l);border:1px solid rgba(13,156,106,0.2);color:var(--green);
+}
+.status-badge.off{background:var(--red-l);border-color:rgba(217,48,37,0.2);color:var(--red)}
+.status-badge.checking{background:var(--blue-l);border-color:rgba(26,86,240,0.2);color:var(--blue)}
+.sdot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+
+/* ══════════════════════════
+   PAGES
+══════════════════════════ */
+.page{display:none;padding-top:60px;min-height:100vh}
+.page.active{display:block}
+
+/* ══════════════════════════
+   HOME PAGE
+══════════════════════════ */
+
+/* Hero */
+.hero{
+  max-width:1200px;margin:0 auto;
+  padding:80px 40px 60px;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:center;
+}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding:48px 24px 40px;gap:40px}}
+
+.hero-left{}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue-l);border:1px solid rgba(26,86,240,0.15);
+  border-radius:100px;padding:5px 14px;
+  font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:24px;
+}
+.eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--blue)}
+
+.hero h1{
+  font-size:clamp(2.4rem,4vw,3.6rem);
+  font-weight:800;line-height:1.08;
+  letter-spacing:-0.03em;
+  color:var(--ink);margin-bottom:20px;
+}
+
+.hero h1 em{
+  font-family:var(--serif);font-style:italic;font-weight:400;
+  color:var(--blue);
+}
+
+.hero-desc{
+  font-size:1rem;font-weight:400;color:var(--ink-dim);
+  line-height:1.75;max-width:440px;margin-bottom:36px;
+}
+
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+.btn-primary{
+  padding:13px 28px;
+  background:var(--ink);border:none;border-radius:var(--r);
+  font-family:var(--sans);font-size:0.88rem;font-weight:700;
+  color:#fff;cursor:pointer;transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 4px 14px rgba(14,14,14,0.2);
+}
+.btn-primary:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 8px 20px rgba(14,14,14,0.25)}
+
+.btn-outline{
+  padding:13px 24px;
+  background:transparent;border:1.5px solid var(--border2);border-radius:var(--r);
+  font-family:var(--sans);font-size:0.88rem;font-weight:600;
+  color:var(--ink-dim);cursor:pointer;transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-outline:hover{border-color:var(--ink);color:var(--ink)}
+
+/* Hero stats */
+.hero-stats{
+  display:flex;gap:32px;margin-top:40px;
+  padding-top:32px;border-top:1px solid var(--border);
+}
+.stat-item{}
+.stat-num{font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;color:var(--ink)}
+.stat-label{font-size:0.72rem;color:var(--ink-muted);font-weight:500;margin-top:1px}
+
+/* Hero right — demo card */
+.hero-right{}
+
+.demo-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+}
+
+.demo-bar{
+  background:var(--bg2);
+  padding:12px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.demo-bar-dots{display:flex;gap:5px}
+.demo-dot{width:10px;height:10px;border-radius:50%}
+.demo-dot-r{background:#ff5f57}.demo-dot-y{background:#ffbd2e}.demo-dot-g{background:#28c840}
+.demo-bar-url{
+  flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:4px 12px;font-family:var(--mono);font-size:0.65rem;color:var(--ink-muted);
+  text-align:center;margin:0 10px;
+}
+
+.demo-body{padding:20px}
+
+.demo-drop-mini{
+  border:1.5px dashed var(--border2);border-radius:var(--r);
+  padding:20px;text-align:center;margin-bottom:14px;
+  background:var(--card2);
+}
+.demo-drop-mini-icon{font-size:1.5rem;margin-bottom:6px}
+.demo-drop-mini-text{font-size:0.75rem;color:var(--ink-muted);font-weight:500}
+
+.demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.demo-field{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.demo-field-lbl{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-muted);font-family:var(--mono);margin-bottom:4px}
+.demo-field-val{font-size:0.82rem;font-weight:700;color:var(--ink);font-family:var(--mono)}
+.demo-field-val.pan-val{color:var(--blue);letter-spacing:0.06em}
+.demo-field-val.dim{color:var(--ink-muted);font-style:italic;font-size:0.72rem;font-weight:400}
+
+.demo-conf{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.demo-conf-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}
+.demo-conf-lbl{color:var(--ink-muted)}
+.demo-conf-val{color:var(--green)}
+.demo-bar-bg{height:4px;background:var(--border);border-radius:100px;overflow:hidden}
+.demo-bar-fill{height:100%;width:96%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:100px}
+
+/* Clients */
+.clients-strip{
+  background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:28px 40px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  flex-wrap:wrap;
+}
+.clients-label{font-size:0.7rem;font-weight:700;color:var(--ink-muted);letter-spacing:0.08em;text-transform:uppercase;margin-right:8px}
+.client-tag{
+  padding:6px 16px;background:var(--card);border:1px solid var(--border);
+  border-radius:100px;font-size:0.75rem;font-weight:600;color:var(--ink-dim);
+}
+
+/* Features */
+.features{max-width:1200px;margin:0 auto;padding:80px 40px}
+.section-header{margin-bottom:48px}
+.section-eyebrow{
+  font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--blue);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-eyebrow::before{content:'';width:16px;height:1.5px;background:var(--blue)}
+.section-header h2{font-size:clamp(1.8rem,3vw,2.4rem);font-weight:800;letter-spacing:-0.025em;line-height:1.15}
+.section-header h2 em{font-family:var(--serif);font-style:italic;font-weight:400}
+
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.feat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.feat-grid{grid-template-columns:1fr}}
+
+.feat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:28px;
+  transition:all 0.25s;
+}
+.feat-card:hover{border-color:var(--border2);box-shadow:var(--shadow);transform:translateY(-2px)}
+
+.feat-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--bg2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;margin-bottom:16px;
+}
+.feat-title{font-size:0.92rem;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.feat-desc{font-size:0.78rem;color:var(--ink-dim);line-height:1.7}
+
+/* How it works */
+.hiw{background:var(--ink);padding:80px 40px}
+.hiw-inner{max-width:1200px;margin:0 auto}
+.hiw .section-eyebrow{color:rgba(255,255,255,0.4)}
+.hiw .section-eyebrow::before{background:rgba(255,255,255,0.4)}
+.hiw .section-header h2{color:#fff}
+
+.hiw-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.08);border-radius:var(--r-lg);overflow:hidden;margin-top:48px}
+@media(max-width:800px){.hiw-steps{grid-template-columns:1fr 1fr}}
+
+.hiw-step{
+  background:var(--ink2);padding:32px 28px;
+  transition:background 0.2s;
+}
+.hiw-step:hover{background:#222}
+.hiw-step-num{
+  font-family:var(--mono);font-size:0.65rem;font-weight:500;
+  color:rgba(255,255,255,0.3);margin-bottom:16px;
+}
+.hiw-step-icon{font-size:1.5rem;margin-bottom:12px}
+.hiw-step-title{font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:6px}
+.hiw-step-desc{font-size:0.75rem;color:rgba(255,255,255,0.45);line-height:1.65}
+
+/* Footer */
+.footer{
+  background:var(--ink);
+  border-top:1px solid rgba(255,255,255,0.06);
+  padding:32px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-logo{font-size:0.9rem;font-weight:800;color:#fff;letter-spacing:-0.02em}
+.footer-note{font-size:0.72rem;color:rgba(255,255,255,0.3)}
+.footer-links{display:flex;gap:20px}
+.footer-link{font-size:0.72rem;color:rgba(255,255,255,0.35);text-decoration:none;cursor:pointer;transition:color 0.2s}
+.footer-link:hover{color:rgba(255,255,255,0.7)}
+
+/* ══════════════════════════
+   SCANNER PAGE
+══════════════════════════ */
+.scanner-layout{
+  max-width:1200px;margin:0 auto;
+  padding:40px 40px 80px;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:24px;align-items:start;
+}
+@media(max-width:960px){.scanner-layout{grid-template-columns:1fr;padding:28px 20px 60px}}
+
+.page-header{
+  max-width:1200px;margin:0 auto;
+  padding:32px 40px 0;
+}
+@media(max-width:960px){.page-header{padding:24px 20px 0}}
+
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72rem;color:var(--ink-muted)}
+.breadcrumb-sep{color:var(--border2)}
+.breadcrumb-cur{color:var(--blue);font-weight:600}
+
+.page-title{font-size:1.7rem;font-weight:800;letter-spacing:-0.025em;margin-bottom:4px}
+.page-subtitle{font-size:0.85rem;color:var(--ink-dim)}
+
+/* Card */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r-xl);overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+.card-head{
+  padding:16px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-head-left{display:flex;align-items:center;gap:10px}
+.card-head-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--bg2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:0.85rem;
+}
+.card-head-title{font-size:0.88rem;font-weight:700;color:var(--ink)}
+.card-head-sub{font-size:0.7rem;color:var(--ink-muted);margin-top:1px}
+.card-body{padding:20px}
+
+/* API bar */
+.api-bar{
+  display:flex;gap:8px;align-items:center;
+  padding:14px 20px;
+  background:var(--card2);
+  border-bottom:1px solid var(--border);
+}
+.api-lbl{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-muted);white-space:nowrap}
+.api-inp{
+  flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;color:var(--ink);font-family:var(--mono);font-size:0.72rem;
+  outline:none;transition:border-color 0.2s;min-width:0;
+}
+.api-inp::placeholder{color:var(--ink-muted)}
+.api-inp:focus{border-color:var(--blue)}
+.api-save{
+  padding:8px 16px;background:var(--ink);border:none;border-radius:8px;
+  font-family:var(--sans);font-size:0.72rem;font-weight:700;
+  color:#fff;cursor:pointer;white-space:nowrap;transition:all 0.2s;
+}
+.api-save:hover{background:var(--ink2)}
+.api-save.saved{background:var(--green)}
+
+/* Tabs */
+.tabs{
+  display:flex;background:var(--card2);border-radius:10px;
+  padding:4px;gap:3px;margin-bottom:18px;
+}
+.tab{
+  flex:1;padding:8px;background:none;border:none;border-radius:7px;
+  font-family:var(--sans);font-size:0.78rem;font-weight:600;
+  color:var(--ink-muted);cursor:pointer;transition:all 0.18s;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.tab:hover{color:var(--ink)}
+.tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Upload zone */
+.upload-zone{
+  position:relative;
+  border:2px dashed var(--border2);border-radius:var(--r-lg);
+  padding:44px 24px;text-align:center;cursor:pointer;
+  transition:all 0.2s;background:var(--card2);
+}
+.upload-zone:hover,.upload-zone.over{border-color:var(--blue);background:var(--blue-l)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-ico{
+  width:52px;height:52px;border-radius:14px;background:var(--card);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+  margin:0 auto 14px;box-shadow:var(--shadow-sm);
+}
+.upload-title{font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px}
+.upload-hint{font-size:0.72rem;color:var(--ink-muted)}
+.upload-cta{font-size:0.72rem;color:var(--blue);font-weight:600;margin-top:5px}
+
+/* Preview */
+.preview-wrap{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:14px;position:relative;display:none}
+.preview-wrap img{width:100%;max-height:200px;object-fit:contain;display:block;background:var(--card2)}
+.preview-x{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:#fff;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Camera */
+.cam-wrap{position:relative;border-radius:var(--r-lg);overflow:hidden;background:#000;aspect-ratio:16/10;border:1px solid var(--border);margin-bottom:14px}
+.cam-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.cam-ov{position:absolute;inset:0;pointer-events:none}
+.cam-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:78%;height:62%;border-radius:8px}
+.cam-border{position:absolute;inset:0;border:2px solid rgba(26,86,240,0.6);border-radius:8px}
+.cam-c{position:absolute;width:14px;height:14px;border-color:var(--blue);border-style:solid}
+.cam-c.tl{top:-1px;left:-1px;border-width:2.5px 0 0 2.5px;border-radius:4px 0 0 0}
+.cam-c.tr{top:-1px;right:-1px;border-width:2.5px 2.5px 0 0;border-radius:0 4px 0 0}
+.cam-c.bl{bottom:-1px;left:-1px;border-width:0 0 2.5px 2.5px;border-radius:0 0 0 4px}
+.cam-c.br{bottom:-1px;right:-1px;border-width:0 2.5px 2.5px 0;border-radius:0 0 4px 0}
+.cam-scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);animation:scanline 2.5s ease-in-out infinite;box-shadow:0 0 6px var(--blue)}
+.cam-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);border-radius:100px;padding:4px 12px;font-size:0.65rem;color:rgba(255,255,255,0.8);white-space:nowrap}
+
+/* Buttons */
+.btn{
+  width:100%;padding:12px 18px;border:none;border-radius:var(--r);
+  font-family:var(--sans);font-size:0.85rem;font-weight:700;
+  cursor:pointer;transition:all 0.18s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-dark:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px)}
+.btn-dark:disabled{opacity:0.3;cursor:not-allowed}
+.btn-light{background:var(--card2);border:1.5px solid var(--border2);color:var(--ink-dim)}
+.btn-light:hover{color:var(--ink);border-color:var(--border2)}
+.btn-row{display:flex;gap:8px}.btn-row .btn{flex:1}
+
+/* Tips */
+.tips-card{
+  background:var(--gold-l);border:1px solid rgba(201,138,0,0.2);
+  border-radius:var(--r-lg);padding:16px 18px;margin-top:16px;
+}
+.tips-title{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:10px}
+.tip-item{display:flex;gap:8px;font-size:0.75rem;color:#7a5c00;line-height:1.5;margin-bottom:5px}
+.tip-item:last-child{margin-bottom:0}
+
+/* Result panel */
+.res-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.res-title{font-size:0.85rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:0.62rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}
+.badge-ok{background:var(--green-l);border:1px solid rgba(13,156,106,0.2);color:var(--green)}
+.badge-err{background:var(--red-l);border:1px solid rgba(217,48,37,0.2);color:var(--red)}
+.badge-wait{background:var(--blue-l);border:1px solid rgba(26,86,240,0.2);color:var(--blue)}
+
+.empty-state{text-align:center;padding:52px 24px}
+.empty-icon{font-size:2.5rem;margin-bottom:12px;opacity:0.25}
+.empty-title{font-size:0.88rem;font-weight:700;color:var(--ink-dim);margin-bottom:4px}
+.empty-desc{font-size:0.75rem;color:var(--ink-muted)}
+
+.loader-state{text-align:center;padding:44px 24px}
+.spin-ring{width:40px;height:40px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.85s linear infinite;margin:0 auto 12px}
+.loader-title{font-size:0.85rem;font-weight:700;margin-bottom:3px}
+.loader-sub{font-size:0.72rem;color:var(--ink-muted)}
+
+/* PAN result visual */
+.pan-card-vis{
+  background:linear-gradient(135deg,#0e1628 0%,#162040 100%);
+  border-radius:var(--r-lg);padding:18px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+}
+.pan-card-vis::after{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(26,86,240,0.15),transparent 70%)}
+.pcv-top{display:flex;align-items:center;gap:7px;margin-bottom:14px}
+.pcv-flag{display:flex;gap:2px}
+.pcv-bar{width:3px;height:16px;border-radius:2px}
+.pcv-govt{font-size:0.54rem;letter-spacing:0.12em;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase}
+.pcv-dept{font-size:0.54rem;letter-spacing:0.08em;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-left:auto}
+.pcv-num{font-family:var(--mono);font-size:1.4rem;font-weight:600;letter-spacing:0.18em;color:#fff;margin-bottom:12px;text-shadow:0 0 16px rgba(26,86,240,0.4)}
+.pcv-num .ph{opacity:0.15;font-size:0.9rem}
+.pcv-meta{display:flex;gap:24px}
+.pcv-lbl{font-size:0.52rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.3);margin-bottom:2px}
+.pcv-val{font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.85)}
+
+/* Field grid */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.f-item{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;transition:border-color 0.18s}
+.f-item:hover{border-color:var(--border2)}
+.f-item.full{grid-column:1/-1}
+.f-lbl{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-muted);font-weight:700;font-family:var(--mono);margin-bottom:4px}
+.f-val{font-size:0.82rem;font-weight:700;color:var(--ink);font-family:var(--mono)}
+.f-val.pan{color:var(--blue);letter-spacing:0.06em;font-size:0.9rem}
+.f-val.empty{color:var(--ink-muted);font-style:italic;font-size:0.72rem;font-weight:400;font-family:var(--sans)}
+
+/* Confidence */
+.conf-box{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;margin-bottom:10px}
+.conf-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.conf-lbl{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-muted);font-weight:700}
+.conf-val{font-family:var(--mono);font-size:0.8rem;font-weight:700}
+.conf-bg{height:4px;background:var(--border);border-radius:100px;overflow:hidden}
+.conf-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 1s cubic-bezier(.4,0,.2,1)}
+
+.raw-box{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-family:var(--mono);font-size:0.65rem;color:var(--ink-dim);white-space:pre-wrap;word-break:break-word;max-height:100px;overflow-y:auto;margin-bottom:10px;line-height:1.75}
+
+.err-box{background:var(--red-l);border:1px solid rgba(217,48,37,0.15);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.err-title{font-size:0.8rem;font-weight:700;color:var(--red);margin-bottom:4px}
+.err-desc{font-size:0.72rem;color:#7a1a14;line-height:1.65}
+.err-tip{margin-top:8px;padding-top:8px;border-top:1px solid rgba(217,48,37,0.12);font-size:0.68rem;color:#9a3030}
+.err-tip code{background:rgba(217,48,37,0.08);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:0.65rem}
+
+/* ══════════════════════════
+   BULK PAGE
+══════════════════════════ */
+.bulk-layout{max-width:1200px;margin:0 auto;padding:40px 40px 80px}
+@media(max-width:960px){.bulk-layout{padding:28px 20px 60px}}
+
+/* Drop zone */
+.bulk-drop{
+  position:relative;
+  border:2px dashed var(--border2);border-radius:var(--r-xl);
+  padding:56px 40px;text-align:center;cursor:pointer;
+  transition:all 0.25s;background:var(--card);
+  margin-bottom:20px;overflow:hidden;
+}
+.bulk-drop::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(26,86,240,0.03),transparent);opacity:0;transition:opacity 0.3s}
+.bulk-drop:hover,.bulk-drop.over{border-color:var(--blue);background:var(--blue-l)}
+.bulk-drop:hover::before,.bulk-drop.over::before{opacity:1}
+.bulk-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+.bulk-drop-icon{
+  width:72px;height:72px;border-radius:18px;
+  background:var(--bg2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;margin:0 auto 18px;
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.3s;
+}
+.bulk-drop:hover .bulk-drop-icon{transform:scale(1.06) rotate(-4deg)}
+.bulk-drop-title{font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
+.bulk-drop-sub{font-size:0.85rem;color:var(--ink-dim);margin-bottom:12px}
+.bulk-drop-types{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.type-pill{background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:0.65rem;font-weight:700;font-family:var(--mono);color:var(--ink-muted)}
+
+/* Queue */
+.queue-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.queue-title{font-size:1rem;font-weight:800;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px}
+.queue-pill{background:var(--ink);color:#fff;border-radius:100px;padding:2px 10px;font-family:var(--mono);font-size:0.7rem}
+.queue-acts{display:flex;gap:6px}
+.q-btn{padding:7px 14px;border-radius:8px;font-family:var(--sans);font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.18s;border:none;display:flex;align-items:center;gap:5px}
+.q-btn-light{background:var(--card2);border:1px solid var(--border);color:var(--ink-dim)}
+.q-btn-light:hover{color:var(--ink);border-color:var(--border2)}
+.q-btn-red{background:var(--red-l);border:1px solid rgba(217,48,37,0.15);color:var(--red)}
+.q-btn-red:hover{background:rgba(217,48,37,0.15)}
+
+/* File grid */
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;max-height:360px;overflow-y:auto;padding-right:2px;margin-bottom:20px}
+.file-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative;transition:all 0.18s;animation:popIn 0.25s ease both}
+.file-card:hover{border-color:var(--border2);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.file-thumb{height:90px;overflow:hidden;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--border2)}
+.file-thumb img{width:100%;height:100%;object-fit:cover}
+.file-info{padding:7px 9px}
+.file-name{font-size:0.68rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.file-size{font-size:0.58rem;color:var(--ink-muted);font-family:var(--mono)}
+.file-status{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:700}
+.file-status.pending{background:rgba(0,0,0,0.12);color:var(--ink-muted)}
+.file-status.processing{background:var(--blue-l);color:var(--blue);animation:spin 0.8s linear infinite}
+.file-status.done{background:var(--green-l);color:var(--green)}
+.file-status.error{background:var(--red-l);color:var(--red)}
+.file-remove{position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.45);border:none;color:#fff;font-size:0.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s}
+.file-card:hover .file-remove{opacity:1}
+
+/* Scan actions */
+.scan-actions{display:flex;gap:12px;margin-bottom:20px}
+.scan-main-btn{
+  flex:1;padding:15px 28px;
+  background:var(--ink);border:none;border-radius:var(--r-lg);
+  font-family:var(--sans);font-size:0.95rem;font-weight:800;
+  color:#fff;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(14,14,14,0.18);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.scan-main-btn:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(14,14,14,0.22)}
+.scan-main-btn:disabled{opacity:0.3;cursor:not-allowed}
+
+.export-main-btn{
+  padding:15px 22px;
+  background:var(--green-l);border:1.5px solid rgba(13,156,106,0.25);border-radius:var(--r-lg);
+  font-family:var(--sans);font-size:0.85rem;font-weight:700;
+  color:var(--green);cursor:pointer;transition:all 0.2s;
+  display:none;align-items:center;gap:7px;white-space:nowrap;
+}
+.export-main-btn:hover{background:rgba(13,156,106,0.15);transform:translateY(-1px)}
+.export-main-btn.show{display:flex}
+
+/* Progress */
+.prog-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 22px;margin-bottom:18px;display:none}
+.prog-card.show{display:block}
+.prog-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.prog-lbl{font-size:0.8rem;font-weight:700}
+.prog-count{font-family:var(--mono);font-size:0.75rem;color:var(--ink-dim)}
+.prog-bg{height:7px;background:var(--bg2);border-radius:100px;overflow:hidden;margin-bottom:12px}
+.prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.35s ease;width:0%}
+.prog-stats{display:flex;gap:18px}
+.prog-stat{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--ink-dim)}
+.prog-dot{width:7px;height:7px;border-radius:50%}
+
+/* Results */
+.results-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;display:none}
+.results-card.show{display:block}
+.results-head{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.results-head-title{font-size:0.92rem;font-weight:800;letter-spacing:-0.01em}
+.results-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:100px;font-size:0.65rem;font-weight:700;display:flex;align-items:center;gap:4px}
+.chip-neutral{background:var(--bg2);border:1px solid var(--border);color:var(--ink-dim)}
+.chip-ok{background:var(--green-l);border:1px solid rgba(13,156,106,0.2);color:var(--green)}
+.chip-err{background:var(--red-l);border:1px solid rgba(217,48,37,0.2);color:var(--red)}
+
+/* Results table */
+.res-table-wrap{overflow-x:auto;max-height:480px;overflow-y:auto}
+.res-table{width:100%;border-collapse:collapse;min-width:680px}
+.res-table th{padding:10px 16px;background:var(--bg2);text-align:left;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-muted);border-bottom:1px solid var(--border);font-family:var(--mono);position:sticky;top:0;z-index:2}
+.res-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--ink-dim);vertical-align:middle}
+.res-table tr:last-child td{border-bottom:none}
+.res-table tr:hover td{background:var(--card2)}
+.td-file{font-size:0.68rem;font-family:var(--mono);color:var(--ink-muted);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-pan{font-family:var(--mono);color:var(--blue);font-weight:700;letter-spacing:0.06em;font-size:0.85rem}
+.td-name{color:var(--ink);font-weight:600}
+.td-empty{color:var(--ink-muted);font-style:italic;font-size:0.72rem}
+.row-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:100px;font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+.row-ok{background:var(--green-l);border:1px solid rgba(13,156,106,0.2);color:var(--green)}
+.row-err{background:var(--red-l);border:1px solid rgba(217,48,37,0.2);color:var(--red)}
+
+/* ══════════════════════════
+   HISTORY PAGE
+══════════════════════════ */
+.history-layout{max-width:1200px;margin:0 auto;padding:40px 40px 80px}
+@media(max-width:960px){.history-layout{padding:28px 20px 60px}}
+.history-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.search-inp{
+  flex:1;min-width:200px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 14px;color:var(--ink);font-family:var(--sans);font-size:0.82rem;outline:none;transition:border-color 0.2s;
+}
+.search-inp::placeholder{color:var(--ink-muted)}
+.search-inp:focus{border-color:var(--blue)}
+.history-refresh{padding:10px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:0.78rem;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:all 0.18s}
+.history-refresh:hover{color:var(--ink);border-color:var(--border2)}
+.history-export{padding:10px 18px;background:var(--ink);border:none;border-radius:var(--r);font-family:var(--sans);font-size:0.78rem;font-weight:700;color:#fff;cursor:pointer;transition:all 0.18s}
+.history-export:hover{background:var(--ink2)}
+
+/* ══════════════════════════
+   ANIMATIONS
+══════════════════════════ */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes scanline{0%{top:0}50%{top:calc(100% - 2px)}100%{top:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+@keyframes aIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:aIn 0.3s ease both}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav class="nav">
+  <a class="nav-logo" href="#" onclick="go('home');return false">
+    <div class="logo-sq">VQ</div>
+    VerifyIQ
+  </a>
+  <div class="nav-center">
+    <button class="nav-item active" id="ni-home"    onclick="go('home')">Overview</button>
+    <button class="nav-item"        id="ni-scanner" onclick="go('scanner')">Scanner</button>
+    <button class="nav-item"        id="ni-bulk"    onclick="go('bulk')">Bulk Upload</button>
+    <button class="nav-item"        id="ni-history" onclick="go('history')">History</button>
+  </div>
+  <div class="nav-right">
+    <div class="status-badge checking" id="status-badge" onclick="checkApi()">
+      <span class="sdot"></span><span id="status-txt">Checking</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════ HOME ══════════════ -->
+<div class="page active" id="page-home">
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow"><span class="eyebrow-dot"></span>Enterprise PAN Verification</div>
+      <h1>Intelligent PAN<br/>Card <em>Extraction</em><br/>at Scale</h1>
+      <p class="hero-desc">VerifyIQ uses deep learning to extract PAN numbers, names, and dates from card images instantly. Built for compliance teams, fintechs, and banks.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="go('bulk')">⚡ Start Bulk Scan</button>
+        <button class="btn-outline" onclick="go('scanner')">Try Single Scan →</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><div class="stat-num">99.2%</div><div class="stat-label">Accuracy Rate</div></div>
+        <div class="stat-item"><div class="stat-num">&lt;2s</div><div class="stat-label">Per Card</div></div>
+        <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">Fields Extracted</div></div>
+        <div class="stat-item"><div class="stat-num">∞</div><div class="stat-label">Batch Size</div></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="demo-card">
+        <div class="demo-bar">
+          <div class="demo-bar-dots"><div class="demo-dot demo-dot-r"></div><div class="demo-dot demo-dot-y"></div><div class="demo-dot demo-dot-g"></div></div>
+          <div class="demo-bar-url">verifyiq.local/scanner</div>
+        </div>
+        <div class="demo-body">
+          <div class="demo-drop-mini">
+            <div class="demo-drop-mini-icon">🪪</div>
+            <div class="demo-drop-mini-text">Drop PAN card images here</div>
+          </div>
+          <div class="demo-grid">
+            <div class="demo-field"><div class="demo-field-lbl">PAN Number</div><div class="demo-field-val pan-val">ABCDE1234F</div></div>
+            <div class="demo-field"><div class="demo-field-lbl">Date of Birth</div><div class="demo-field-val">01/01/1990</div></div>
+            <div class="demo-field"><div class="demo-field-lbl">Full Name</div><div class="demo-field-val">RAHUL KUMAR</div></div>
+            <div class="demo-field"><div class="demo-field-lbl">Father's Name</div><div class="demo-field-val">SURESH KUMAR</div></div>
+          </div>
+          <div class="demo-conf">
+            <div class="demo-conf-row"><span class="demo-conf-lbl">Confidence Score</span><span class="demo-conf-val">96%</span></div>
+            <div class="demo-bar-bg"><div class="demo-bar-fill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="clients-strip">
+    <span class="clients-label">Trusted by teams at</span>
+    <span class="client-tag">Banking & Finance</span>
+    <span class="client-tag">KYC Compliance</span>
+    <span class="client-tag">Insurance</span>
+    <span class="client-tag">HR & Payroll</span>
+    <span class="client-tag">Government Services</span>
+    <span class="client-tag">Lending Platforms</span>
+  </div>
+
+  <div class="features">
+    <div class="section-header">
+      <div class="section-eyebrow">Capabilities</div>
+      <h2>Everything you need for<br/><em>large-scale</em> PAN verification</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="feat-icon">🧠</div><div class="feat-title">YOLO + CTC-OCR Pipeline</div><div class="feat-desc">Two-stage model — YOLO detects and crops regions, a custom CTC model reads each field with post-processing corrections.</div></div>
+      <div class="feat-card"><div class="feat-icon">📦</div><div class="feat-title">True Bulk Processing</div><div class="feat-desc">Upload hundreds of PAN cards at once. Each image is processed in parallel and results appear in a sortable, exportable table.</div></div>
+      <div class="feat-card"><div class="feat-icon">📷</div><div class="feat-title">Live Camera Capture</div><div class="feat-desc">Use your device camera with real-time alignment guides to scan physical PAN cards without any prior scanning.</div></div>
+      <div class="feat-card"><div class="feat-icon">🗄️</div><div class="feat-title">MySQL History</div><div class="feat-desc">Every scan is automatically saved to your MySQL database. Search, filter, and audit your entire verification history.</div></div>
+      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">CSV Export</div><div class="feat-desc">Download all extracted fields as a clean CSV — ready for Excel, Google Sheets, or any data pipeline.</div></div>
+      <div class="feat-card"><div class="feat-icon">🔒</div><div class="feat-title">100% On-Premise</div><div class="feat-desc">Your model runs locally. Images never leave your infrastructure. No third-party API calls, no cloud dependency.</div></div>
+    </div>
+  </div>
+
+  <div class="hiw">
+    <div class="hiw-inner">
+      <div class="section-header">
+        <div class="section-eyebrow">How It Works</div>
+        <h2 style="color:#fff">Four steps from image<br/>to <em style="color:rgba(255,255,255,0.5)">structured data</em></h2>
+      </div>
+      <div class="hiw-steps">
+        <div class="hiw-step"><div class="hiw-step-num">01</div><div class="hiw-step-icon">🚀</div><div class="hiw-step-title">Start Your Server</div><div class="hiw-step-desc">Run your Flask server locally. VerifyIQ connects to it instantly via the API endpoint field.</div></div>
+        <div class="hiw-step"><div class="hiw-step-num">02</div><div class="hiw-step-icon">📤</div><div class="hiw-step-title">Upload Cards</div><div class="hiw-step-desc">Drop one or hundreds of PAN card images. Drag & drop supported with instant thumbnail preview.</div></div>
+        <div class="hiw-step"><div class="hiw-step-num">03</div><div class="hiw-step-icon">⚡</div><div class="hiw-step-title">AI Extraction</div><div class="hiw-step-desc">YOLO detects each field. CTC-OCR reads the text. Post-processing corrects common OCR errors.</div></div>
+        <div class="hiw-step"><div class="hiw-step-num">04</div><div class="hiw-step-icon">✅</div><div class="hiw-step-title">Export & Store</div><div class="hiw-step-desc">Results saved to MySQL, displayed in a table, and exportable as CSV with one click.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-logo">VerifyIQ</div>
+    <div class="footer-note">On-premise PAN verification · Images processed locally · No external data sharing</div>
+    <div class="footer-links">
+      <span class="footer-link" onclick="go('scanner')">Scanner</span>
+      <span class="footer-link" onclick="go('bulk')">Bulk Upload</span>
+      <span class="footer-link" onclick="go('history')">History</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════ SCANNER ══════════════ -->
+<div class="page" id="page-scanner">
+  <div class="page-header">
+    <div class="breadcrumb"><span onclick="go('home')" style="cursor:pointer">Overview</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-cur">Scanner</span></div>
+    <div class="page-title">PAN Card Scanner</div>
+    <div class="page-subtitle">Upload an image or use your camera to extract PAN card data</div>
+  </div>
+
+  <div class="scanner-layout">
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-head-icon">📡</div>
+            <div><div class="card-head-title">Model Endpoint</div><div class="card-head-sub">Flask / FastAPI server URL</div></div>
+          </div>
+        </div>
+        <div class="api-bar">
+          <span class="api-lbl">URL</span>
+          <input class="api-inp" id="api-url" type="text" placeholder="http://localhost:5001/predict"/>
+          <button class="api-save" id="api-save-btn" onclick="saveApi()">Save</button>
+        </div>
+        <div class="card-body">
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab('upload',this)">📁 Upload</button>
+            <button class="tab" onclick="switchTab('camera',this)">📷 Camera</button>
+          </div>
+
+          <div class="tab-panel active" id="tab-upload">
+            <div class="preview-wrap" id="preview-wrap">
+              <img id="preview-img" alt="preview"/>
+              <button class="preview-x" onclick="resetUpload()">✕</button>
+            </div>
+            <div class="upload-zone" id="drop-zone">
+              <input type="file" accept="image/*" id="file-input" onchange="handleFile(event)"/>
+              <div class="upload-ico">🪪</div>
+              <div class="upload-title">Drop PAN card image</div>
+              <div class="upload-hint">JPG · PNG · WEBP · up to 10MB</div>
+              <div class="upload-cta">or click to browse</div>
+            </div>
+            <div style="margin-top:14px;">
+              <button class="btn btn-dark" id="scan-btn" onclick="doScan()" disabled>⚡ Extract Data</button>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-camera">
+            <div class="cam-wrap">
+              <video id="cam-video" autoplay playsinline muted></video>
+              <div class="cam-ov"><div class="cam-frame"><div class="cam-border"></div><div class="cam-c tl"></div><div class="cam-c tr"></div><div class="cam-c bl"></div><div class="cam-c br"></div><div class="cam-scan"></div></div></div>
+              <div class="cam-hint">Align PAN card within frame</div>
+            </div>
+            <canvas id="snap-canvas" style="display:none;"></canvas>
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="btn btn-light" onclick="startCam()">▶ Start</button>
+              <button class="btn btn-light" onclick="stopCam()">■ Stop</button>
+            </div>
+            <button class="btn btn-dark" onclick="capture()">📸 Capture & Extract</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tips-card">
+        <div class="tips-title">💡 Tips for best accuracy</div>
+        <div class="tip-item"><span>→</span> Ensure the full card is visible — no cropping at edges</div>
+        <div class="tip-item"><span>→</span> Use good, even lighting — avoid glare and shadows</div>
+        <div class="tip-item"><span>→</span> Keep the card flat and image in sharp focus</div>
+        <div class="tip-item"><span>→</span> CORS must be enabled on your Flask server</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="res-head">
+          <div class="res-title">📋 Extracted Data</div>
+          <div id="res-badge"></div>
+        </div>
+        <div id="res-body" style="padding:20px;">
+          <div class="empty-state">
+            <div class="empty-icon">🪪</div>
+            <div class="empty-title">No extraction yet</div>
+            <div class="empty-desc">Upload or capture a PAN card to begin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ BULK ══════════════ -->
+<div class="page" id="page-bulk">
+  <div class="page-header">
+    <div class="breadcrumb"><span onclick="go('home')" style="cursor:pointer">Overview</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-cur">Bulk Upload</span></div>
+    <div class="page-title">Bulk PAN Scanner</div>
+    <div class="page-subtitle">Upload multiple PAN cards at once and get all results in a single table</div>
+  </div>
+
+  <div class="bulk-layout">
+    <!-- API bar -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="api-bar">
+        <span class="api-lbl">Bulk Endpoint</span>
+        <input class="api-inp" id="bulk-api-url" type="text" placeholder="http://localhost:5001/predict-bulk"/>
+        <button class="api-save" id="bulk-save-btn" onclick="saveBulkApi()">Save</button>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="bulk-drop" id="bulk-drop">
+      <input type="file" accept="image/*" multiple id="bulk-input" onchange="handleBulkFiles(event)"/>
+      <div class="bulk-drop-icon">🪪</div>
+      <div class="bulk-drop-title">Drop PAN Card Images Here</div>
+      <div class="bulk-drop-sub">Select as many files as you need — no limit</div>
+      <div class="bulk-drop-types">
+        <span class="type-pill">JPG</span>
+        <span class="type-pill">PNG</span>
+        <span class="type-pill">WEBP</span>
+        <span class="type-pill">HEIC</span>
+        <span class="type-pill">Unlimited</span>
+      </div>
+    </div>
+
+    <!-- Queue -->
+    <div id="queue-wrap" style="display:none;">
+      <div class="queue-bar">
+        <div class="queue-title">Queue <span class="queue-pill" id="queue-count">0</span></div>
+        <div class="queue-acts">
+          <button class="q-btn q-btn-light" onclick="addMoreFiles()">+ Add More</button>
+          <button class="q-btn q-btn-red" onclick="clearQueue()">✕ Clear All</button>
+        </div>
+      </div>
+      <div class="file-grid" id="file-grid"></div>
+
+      <div class="scan-actions">
+        <button class="scan-main-btn" id="bulk-scan-btn" onclick="startBulkScan()">⚡ Scan All Cards</button>
+        <button class="export-main-btn" id="bulk-export-btn" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="prog-card" id="prog-card">
+      <div class="prog-head">
+        <span class="prog-lbl">Processing</span>
+        <span class="prog-count" id="prog-count">0 / 0</span>
+      </div>
+      <div class="prog-bg"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-stats">
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--green)"></div><span id="s-ok">0 done</span></div>
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--red)"></div><span id="s-err">0 failed</span></div>
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--blue)"></div><span id="s-pend">0 pending</span></div>
+      </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="results-card" id="results-card">
+      <div class="results-head">
+        <div class="results-head-title">Results</div>
+        <div class="results-chips" id="results-chips"></div>
+      </div>
+      <div class="res-table-wrap">
+        <table class="res-table">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>PAN Number</th>
+              <th>Name</th>
+              <th>Father's Name</th>
+              <th>Date of Birth</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="res-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ HISTORY ══════════════ -->
+<div class="page" id="page-history">
+  <div class="page-header">
+    <div class="breadcrumb"><span onclick="go('home')" style="cursor:pointer">Overview</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-cur">History</span></div>
+    <div class="page-title">Scan History</div>
+    <div class="page-subtitle">All extractions saved to your MySQL database</div>
+  </div>
+  <div class="history-layout">
+    <div class="history-toolbar">
+      <input class="search-inp" id="hist-search" type="text" placeholder="Search by PAN number or name…" oninput="filterHistory()"/>
+      <button class="history-refresh" onclick="loadHistory()">↻ Refresh</button>
+      <button class="history-export" onclick="exportHistoryCSV()">📥 Export All</button>
+    </div>
+    <div id="history-content">
+      <div class="results-card show" style="display:block;">
+        <div class="results-head">
+          <div class="results-head-title">All Scans</div>
+          <div id="hist-chips"></div>
+        </div>
+        <div class="res-table-wrap">
+          <table class="res-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>File</th>
+                <th>PAN Number</th>
+                <th>Name</th>
+                <th>Father's Name</th>
+                <th>Date of Birth</th>
+                <th>Scanned At</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-muted);font-size:0.82rem;">Click Refresh to load history from database</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" multiple id="add-more-input" style="display:none;" onchange="handleBulkFiles(event)"/>
+
+<script>
+/* ══════════════════════════
+   NAVIGATION
+══════════════════════════ */
+function go(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const ni = document.getElementById('ni-' + page);
+  if (ni) ni.classList.add('active');
+  window.scrollTo(0,0);
+  if (page === 'history') loadHistory();
+}
+
+/* ══════════════════════════
+   API CONFIG
+══════════════════════════ */
+let apiUrl     = localStorage.getItem('viq_api')      || 'http://localhost:5001/predict';
+let bulkApiUrl = localStorage.getItem('viq_bulk_api') || 'http://localhost:5001/predict-bulk';
+let histApiUrl = 'http://localhost:5001/scans';
+
+document.getElementById('api-url').value      = apiUrl;
+document.getElementById('bulk-api-url').value = bulkApiUrl;
+
+function saveApi() {
+  apiUrl = document.getElementById('api-url').value.trim();
+  localStorage.setItem('viq_api', apiUrl);
+  flash('api-save-btn'); checkApi();
+}
+
+function saveBulkApi() {
+  bulkApiUrl = document.getElementById('bulk-api-url').value.trim();
+  localStorage.setItem('viq_bulk_api', bulkApiUrl);
+  flash('bulk-save-btn'); checkApi();
+}
+
+function flash(id) {
+  const btn = document.getElementById(id);
+  const orig = btn.textContent;
+  btn.textContent = '✓ Saved'; btn.classList.add('saved');
+  setTimeout(() => { btn.textContent = orig; btn.classList.remove('saved'); }, 1800);
+}
+
+async function checkApi() {
+  const el  = document.getElementById('status-badge');
+  const txt = document.getElementById('status-txt');
+  const hUrl = (apiUrl || bulkApiUrl).replace(/\/predict.*$/, '') + '/health';
+  el.className = 'status-badge checking'; txt.textContent = 'Checking';
+  try {
+    await fetch(hUrl, { signal: AbortSignal.timeout(3000) });
+    el.className = 'status-badge'; txt.textContent = 'API Online';
+  } catch {
+    el.className = 'status-badge off'; txt.textContent = 'API Offline';
+  }
+}
+checkApi();
+
+/* ══════════════════════════
+   SCANNER
+══════════════════════════ */
+let selFile = null, camStream = null;
+
+function handleFile(e) { const f = e.target.files[0]; if (f) loadPreview(f); }
+function loadPreview(f) {
+  selFile = f;
+  document.getElementById('preview-img').src = URL.createObjectURL(f);
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('scan-btn').disabled = false;
+  clearRes();
+}
+function resetUpload() {
+  selFile = null;
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('drop-zone').style.display = 'block';
+  document.getElementById('file-input').value = '';
+  document.getElementById('scan-btn').disabled = true;
+  clearRes();
+}
+async function doScan() { if (!selFile) return; showLoader(); await callApi(selFile); }
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadPreview(f);
+});
+
+function switchTab(n, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + n).classList.add('active');
+  btn.classList.add('active');
+  clearRes();
+  if (n === 'camera') startCam(); else stopCam();
+}
+
+async function startCam() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:'environment',width:{ideal:1280},height:{ideal:960}} });
+    document.getElementById('cam-video').srcObject = camStream;
+  } catch(e) { showErr('Camera Denied', e.message); }
+}
+function stopCam() { if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
+async function capture() {
+  const v = document.getElementById('cam-video');
+  if (!v.srcObject) { showErr('Camera Inactive', 'Press Start first.'); return; }
+  const c = document.getElementById('snap-canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  showLoader();
+  c.toBlob(async blob => await callApi(new File([blob],'capture.jpg',{type:'image/jpeg'})), 'image/jpeg', 0.93);
+}
+
+async function callApi(file) {
+  const fd = new FormData(); fd.append('image',file); fd.append('file',file);
+  try {
+    const r = await fetch(apiUrl, {method:'POST',body:fd});
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    renderRes(await r.json());
+  } catch(e) { showErr('Connection Failed', e.message, true); }
+}
+
+/* ══════════════════════════
+   RENDER SINGLE RESULT
+══════════════════════════ */
+function renderRes(d) {
+  const isOk = d.is_pan_card !== false;
+  const conf = d.confidence != null ? Math.round(d.confidence * 100) : null;
+  document.getElementById('res-badge').innerHTML = isOk
+    ? '<span class="badge badge-ok">✓ PAN Detected</span>'
+    : '<span class="badge badge-err">✗ Not Detected</span>';
+
+  const pan=d.pan_number||'', name=d.name||'', dob=d.dob||'', dad=d.father_name||'', raw=d.raw_text||'';
+  const confH = conf != null ? `<div class="conf-box"><div class="conf-row"><span class="conf-lbl">Model Confidence</span><span class="conf-val" style="color:${conf>=80?'var(--green)':conf>=50?'var(--gold)':'var(--red)'}">${conf}%</span></div><div class="conf-bg"><div class="conf-fill" id="cbar" style="width:0%"></div></div></div>` : '';
+  const rawH  = raw ? `<div class="f-item full" style="margin-bottom:10px;"><div class="f-lbl">Raw OCR Output</div><div class="raw-box">${esc(raw)}</div></div>` : '';
+
+  document.getElementById('res-body').innerHTML = `<div class="anim" style="padding:0;">
+    <div class="pan-card-vis">
+      <div class="pcv-top"><div class="pcv-flag"><div class="pcv-bar" style="background:#ff9933"></div><div class="pcv-bar" style="background:#fff"></div><div class="pcv-bar" style="background:#138808"></div></div><span class="pcv-govt">Govt. of India</span><span class="pcv-dept">Income Tax Dept.</span></div>
+      <div class="pcv-num">${pan||'<span class="ph">· · · · · · · · · ·</span>'}</div>
+      <div class="pcv-meta"><div><div class="pcv-lbl">Name</div><div class="pcv-val">${name||'—'}</div></div><div><div class="pcv-lbl">Date of Birth</div><div class="pcv-val">${dob||'—'}</div></div></div>
+    </div>
+    <div style="padding:16px 20px;">
+      <div class="field-grid">
+        ${fi('PAN Number',pan,'pan')}${fi('Date of Birth',dob)}${fi('Full Name',name)}${fi("Father's Name",dad)}
+      </div>
+      ${confH}${rawH}
+      <button class="btn btn-light" style="font-size:0.78rem;" onclick="resetUpload();clearRes()">↺ Scan Another</button>
+    </div>
+  </div>`;
+  if (conf != null) setTimeout(() => { const b=document.getElementById('cbar'); if(b) b.style.width=conf+'%'; },100);
+}
+
+function fi(label, val, cls='') {
+  const ok = val && val.trim();
+  return `<div class="f-item"><div class="f-lbl">${label}</div><div class="f-val ${cls} ${ok?'':'empty'}">${ok?esc(val):'Not detected'}</div></div>`;
+}
+
+function showLoader() {
+  document.getElementById('res-badge').innerHTML = '<span class="badge badge-wait">⏳ Processing</span>';
+  document.getElementById('res-body').innerHTML = `<div class="loader-state anim"><div class="spin-ring"></div><div class="loader-title">Extracting Data</div><div class="loader-sub">Running YOLO + OCR pipeline…</div></div>`;
+}
+
+function showErr(title, desc, tips) {
+  document.getElementById('res-badge').innerHTML = '<span class="badge badge-err">✗ Error</span>';
+  const tipH = tips ? `<div class="err-tip">Check server is running · Add <code>CORS(app)</code> to Flask · Verify endpoint URL</div>` : '';
+  document.getElementById('res-body').innerHTML = `<div style="padding:20px;" class="anim"><div class="err-box"><div class="err-title">⚠ ${esc(title)}</div><div class="err-desc">${esc(desc)}</div>${tipH}</div><button class="btn btn-light" onclick="resetUpload();clearRes()">Try Again</button></div>`;
+}
+
+function clearRes() {
+  document.getElementById('res-badge').innerHTML = '';
+  document.getElementById('res-body').innerHTML = `<div class="empty-state"><div class="empty-icon">🪪</div><div class="empty-title">No extraction yet</div><div class="empty-desc">Upload or capture a PAN card to begin</div></div>`;
+}
+
+/* ══════════════════════════
+   BULK SCANNER
+══════════════════════════ */
+let bFiles = [], bResults = [], bId = 0;
+
+function handleBulkFiles(e) {
+  Array.from(e.target.files).forEach(f => bFiles.push({file:f,id:bId++,status:'pending'}));
+  e.target.value = '';
+  renderQueue();
+}
+
+function addMoreFiles() { document.getElementById('add-more-input').click(); }
+
+function clearQueue() {
+  bFiles = []; bResults = [];
+  renderQueue();
+  document.getElementById('prog-card').classList.remove('show');
+  document.getElementById('results-card').classList.remove('show');
+  document.getElementById('bulk-export-btn').classList.remove('show');
+}
+
+function renderQueue() {
+  const wrap = document.getElementById('queue-wrap');
+  const grid = document.getElementById('file-grid');
+  const cnt  = document.getElementById('queue-count');
+  if (!bFiles.length) { wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+  cnt.textContent = bFiles.length;
+  grid.innerHTML = bFiles.map(f => {
+    const kb = (f.file.size/1024).toFixed(0);
+    return `<div class="file-card" id="fc-${f.id}">
+      <button class="file-remove" onclick="removeFile(${f.id})">✕</button>
+      <div class="file-thumb" id="ft-${f.id}">🪪</div>
+      <div class="file-info"><div class="file-name">${esc(f.file.name)}</div><div class="file-size">${kb} KB</div></div>
+      <div class="file-status pending" id="fs-${f.id}">·</div>
+    </div>`;
+  }).join('');
+  bFiles.forEach(f => loadThumb(f));
+}
+
+function loadThumb(e) {
+  const el = document.getElementById('ft-'+e.id); if (!el) return;
+  const r = new FileReader();
+  r.onload = ev => { el.innerHTML = `<img src="${ev.target.result}" alt=""/>`; };
+  r.readAsDataURL(e.file);
+}
+
+function removeFile(id) { bFiles = bFiles.filter(f => f.id!==id); renderQueue(); }
+
+function setStatus(id, s, icon) {
+  const el = document.getElementById('fs-'+id); if (!el) return;
+  el.className = 'file-status '+s; el.textContent = icon;
+}
+
+/* Drag & drop for bulk */
+const bdz = document.getElementById('bulk-drop');
+bdz.addEventListener('dragover', e => { e.preventDefault(); bdz.classList.add('over'); });
+bdz.addEventListener('dragleave', () => bdz.classList.remove('over'));
+bdz.addEventListener('drop', e => {
+  e.preventDefault(); bdz.classList.remove('over');
+  const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  dropped.forEach(f => bFiles.push({file:f,id:bId++,status:'pending'}));
+  renderQueue();
+});
+
+async function startBulkScan() {
+  if (!bFiles.length) return;
+  const btn = document.getElementById('bulk-scan-btn');
+  btn.disabled = true; btn.textContent = '⏳ Scanning…';
+  bResults = [];
+  let done=0, ok=0, err=0;
+  document.getElementById('prog-card').classList.add('show');
+  updProg(0,bFiles.length,0,0,bFiles.length);
+  bFiles.forEach(f => { f.status='pending'; setStatus(f.id,'pending','·'); });
+
+  // Process one by one through /predict for reliability
+  const sUrl = bulkApiUrl.includes('predict-bulk')
+    ? bulkApiUrl.replace('/predict-bulk','/predict')
+    : bulkApiUrl;
+
+  for (const entry of bFiles) {
+    entry.status = 'processing'; setStatus(entry.id,'processing','↻');
+    const fd = new FormData(); fd.append('image',entry.file); fd.append('file',entry.file);
+    try {
+      const r = await fetch(sUrl,{method:'POST',body:fd});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      entry.status = 'done'; ok++;
+      bResults.push({filename:entry.file.name,status:'success',pan_number:d.pan_number||'',name:d.name||'',father_name:d.father_name||'',dob:d.dob||''});
+    } catch(e) {
+      entry.status = 'error'; err++;
+      bResults.push({filename:entry.file.name,status:'error',error:e.message});
+    }
+    setStatus(entry.id, entry.status, entry.status==='done'?'✓':'✗');
+    done++;
+    updProg(done,bFiles.length,ok,err,bFiles.length-done);
+  }
+
+  btn.disabled=false; btn.textContent='⚡ Scan All Cards';
+  document.getElementById('bulk-export-btn').classList.add('show');
+  renderBulkResults();
+}
+
+function updProg(done,total,ok,err,pend) {
+  const pct = total>0?Math.round((done/total)*100):0;
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-count').textContent = done+' / '+total;
+  document.getElementById('s-ok').textContent   = ok+' done';
+  document.getElementById('s-err').textContent  = err+' failed';
+  document.getElementById('s-pend').textContent = pend+' pending';
+}
+
+function renderBulkResults() {
+  const card = document.getElementById('results-card');
+  card.classList.add('show');
+  card.scrollIntoView({behavior:'smooth',block:'start'});
+
+  const ok  = bResults.filter(r=>r.status!=='error').length;
+  const err = bResults.filter(r=>r.status==='error').length;
+
+  document.getElementById('results-chips').innerHTML =
+    `<span class="chip chip-neutral">📋 ${bResults.length} total</span>
+     <span class="chip chip-ok">✓ ${ok} success</span>
+     ${err?`<span class="chip chip-err">✗ ${err} failed</span>`:''}`;
+
+  document.getElementById('res-tbody').innerHTML = bResults.map(r => {
+    const isErr = r.status==='error';
+    return `<tr>
+      <td class="td-file" title="${esc(r.filename)}">${esc(r.filename)}</td>
+      <td class="${r.pan_number?'td-pan':''}">` + (r.pan_number||`<span class="td-empty">—</span>`) + `</td>
+      <td class="${r.name?'td-name':''}">` + (r.name||`<span class="td-empty">—</span>`) + `</td>
+      <td>` + (r.father_name||`<span class="td-empty">—</span>`) + `</td>
+      <td>` + (r.dob||`<span class="td-empty">—</span>`) + `</td>
+      <td>${isErr?`<span class="row-badge row-err">✗ Error</span>`:`<span class="row-badge row-ok">✓ Done</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportCSV() {
+  const h = ['Filename','PAN Number','Name',"Father's Name",'DOB','Status'];
+  const rows = bResults.map(r=>[r.filename,r.pan_number||'',r.name||'',r.father_name||'',r.dob||'',r.status]);
+  dlCSV([h,...rows],'pan_bulk_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+/* ══════════════════════════
+   HISTORY
+══════════════════════════ */
+let allHistory = [];
+
+async function loadHistory() {
+  const tbody = document.getElementById('hist-tbody');
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--ink-muted);font-size:0.82rem;">Loading from database…</td></tr>`;
+  try {
+    const r    = await fetch(histApiUrl.replace('/predict','').replace('/predict-bulk','').replace('/scans','') + '/scans');
+    const data = await r.json();
+    allHistory = data.scans || [];
+    document.getElementById('hist-chips').innerHTML =
+      `<span class="chip chip-neutral">📋 ${allHistory.length} records</span>`;
+    renderHistory(allHistory);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--red);font-size:0.82rem;">Could not load — make sure your Flask server is running at ${histApiUrl}</td></tr>`;
+  }
+}
+
+function renderHistory(rows) {
+  const tbody = document.getElementById('hist-tbody');
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--ink-muted);font-size:0.82rem;">No records found</td></tr>`; return; }
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td style="font-family:var(--mono);font-size:0.68rem;color:var(--ink-muted)">#${r.id}</td>
+    <td class="td-file">${esc(r.filename||'')}</td>
+    <td class="${r.pan_number?'td-pan':''}">${r.pan_number||`<span class="td-empty">—</span>`}</td>
+    <td class="${r.name?'td-name':''}">${r.name||`<span class="td-empty">—</span>`}</td>
+    <td>${r.father_name||`<span class="td-empty">—</span>`}</td>
+    <td>${r.dob||`<span class="td-empty">—</span>`}</td>
+    <td style="font-size:0.68rem;font-family:var(--mono);color:var(--ink-muted)">${r.scanned_at?r.scanned_at.slice(0,16):''}</td>
+    <td><span class="row-badge ${r.status==='error'?'row-err':'row-ok'}">${r.status==='error'?'✗ Error':'✓ Done'}</span></td>
+  </tr>`).join('');
+}
+
+function filterHistory() {
+  const q = document.getElementById('hist-search').value.toLowerCase();
+  renderHistory(allHistory.filter(r =>
+    (r.pan_number||'').toLowerCase().includes(q) ||
+    (r.name||'').toLowerCase().includes(q) ||
+    (r.father_name||'').toLowerCase().includes(q)
+  ));
+}
+
+function exportHistoryCSV() {
+  const h = ['ID','Filename','PAN Number','Name',"Father's Name",'DOB','Scanned At','Status'];
+  const rows = allHistory.map(r=>[r.id,r.filename||'',r.pan_number||'',r.name||'',r.father_name||'',r.dob||'',r.scanned_at||'',r.status||'']);
+  dlCSV([h,...rows],'verifyiq_history_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+/* ══════════════════════════
+   UTILS
+══════════════════════════ */
+function dlCSV(rows, filename) {
+  const csv  = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a    = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

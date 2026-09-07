@@ -22,9 +22,9 @@ from postprocess import correct_ocr_errors, regex_validate
 
 
 # --- CONFIGURATION ---
-YOLO_MODEL_PATH = "best.pt"  
-OCR_MODEL_PATH = "checkpoints/final_model.keras"  
-CROPPED_OUTPUTS_DIR = "cropped_outputs"
+YOLO_MODEL_PATH = "models/best.pt"  
+OCR_MODEL_PATH = "models/final_model.keras"  
+CROPPED_OUTPUTS_DIR = "development/ocr_model/cropped_outputs"
 CLASSES = ['DOB', 'Father Name', 'Name', 'PAN', 'PAN Number', 'Photo', 'QR', 'Signature']
 OCR_CLASSES = ["DOB", "PAN Number", "Name", "Father Name"]  
 IMG_HEIGHT = 64

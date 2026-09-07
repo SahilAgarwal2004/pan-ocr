@@ -1,0 +1,58 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# macOS
+# =========================
+
+.DS_Store
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# OCR / ML generated files
+# =========================
+
+# Training checkpoints
+development/ocr_training/checkpoints/
+
+# Generated cropped images
+development/ocr_training/cropped_outputs/
+
+# Generated inference/output files
+development/ocr_training/output.json
+
+# Temporary / generated images
+development/ocr_training/*.jpg
+development/ocr_training/*.jpeg
+development/ocr_training/*.png
+
+# =========================
+# IDE
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/

@@ -1023,9 +1023,9 @@ function go(page) {
 /* ══════════════════════════
    API CONFIG
 ══════════════════════════ */
-let apiUrl     = localStorage.getItem('viq_api')      || 'http://localhost:5001/predict';
-let bulkApiUrl = localStorage.getItem('viq_bulk_api') || 'http://localhost:5001/predict-bulk';
-let histApiUrl = 'http://localhost:5001/scans';
+let apiUrl     = localStorage.getItem('viq_api')      || 'https://pan-ocr-backend.onrender.com/predict';
+let bulkApiUrl = localStorage.getItem('viq_bulk_api') || 'https://pan-ocr-backend.onrender.com/predict-bulk';
+let histApiUrl = 'https://pan-ocr-backend.onrender.com/scans';
 
 document.getElementById('api-url').value      = apiUrl;
 document.getElementById('bulk-api-url').value = bulkApiUrl;

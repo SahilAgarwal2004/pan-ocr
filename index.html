@@ -659,6 +659,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hi
 .history-refresh:hover{color:var(--ink);border-color:var(--border2)}
 .history-export{padding:10px 18px;background:var(--ink);border:none;border-radius:var(--r);font-family:var(--sans);font-size:0.78rem;font-weight:700;color:#fff;cursor:pointer;transition:all 0.18s}
 .history-export:hover{background:var(--ink2)}
+.history-clear{padding:10px 18px;background:transparent;border:1px solid rgba(217,48,37,0.3);border-radius:var(--r);font-family:var(--sans);font-size:0.78rem;font-weight:700;color:var(--red);cursor:pointer;transition:all 0.18s;display:inline-flex;align-items:center;gap:6px}
+.history-clear:hover{background:var(--red-l);border-color:var(--red);transform:translateY(-1px)}
 
 /* ══════════════════════════
    ANIMATIONS
@@ -978,6 +980,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hi
       <input class="search-inp" id="hist-search" type="text" placeholder="Search by name or file…" oninput="filterHistory()"/>
       <button class="history-refresh" onclick="loadHistory()">↻ Refresh</button>
       <button class="history-export" onclick="exportHistoryCSV()">📥 Export All</button>
+      <button class="history-clear" id="clear-db-btn" onclick="clearHistory()">🗑 Clear Database</button>
     </div>
     <div id="history-content">
       <div class="results-card show" style="display:block;">
@@ -1462,6 +1465,39 @@ function exportHistoryCSV() {
     r.status||''
   ]);
   dlCSV([h,...rows],'verifyiq_history_encrypted_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+async function clearHistory() {
+  if (!allHistory || !allHistory.length) {
+    alert('The database is already empty.');
+    return;
+  }
+  const confirmed = confirm(`Are you sure you want to delete all ${allHistory.length} scan records from the database?\n\nThis action cannot be undone.`);
+  if (!confirmed) return;
+
+  const btn = document.getElementById('clear-db-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clearing…'; }
+
+  const targetBase = (apiUrl || histApiUrl || DEFAULT_API_BASE).replace(/\/predict.*$/, '').replace(/\/scans.*$/, '');
+  try {
+    const res = await fetch(`${targetBase}/scans`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) {
+      await fetch(`${targetBase}/scans/clear`, { method: 'POST' });
+    }
+    allHistory = [];
+    for (const k in revealedCache) delete revealedCache[k];
+    document.getElementById('hist-chips').innerHTML =
+      `<span class="chip chip-neutral">📋 0 records</span>`;
+    renderHistory([]);
+    alert('All scan records deleted successfully.');
+  } catch(e) {
+    alert('Failed to clear database: ' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Clear Database'; }
+  }
 }
 
 /* ══════════════════════════

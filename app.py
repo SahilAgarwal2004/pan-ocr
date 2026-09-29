@@ -383,6 +383,31 @@ def reveal_scan(scan_id: int):
     except Exception as e:
         return {"error": str(e)}
 
+@app.delete("/scans")
+@app.post("/scans/clear")
+def clear_all_scans():
+    try:
+        db_mode = init_db()
+        if db_mode == "mysql":
+            conn = pymysql.connect(**DB_CONFIG)
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE TABLE scan_results")
+            conn.commit()
+            conn.close()
+        else:
+            conn = sqlite3.connect(SQLITE_DB_PATH)
+            cur = conn.cursor()
+            cur.execute("DELETE FROM scan_results")
+            try:
+                cur.execute("DELETE FROM sqlite_sequence WHERE name = 'scan_results'")
+            except Exception:
+                pass
+            conn.commit()
+            conn.close()
+        return {"message": "All scan records cleared successfully", "total": 0, "status": "ok"}
+    except Exception as e:
+        return {"error": str(e), "status": "error"}
+
 @app.delete("/scans/{scan_id}")
 def delete_scan(scan_id: int):
     try:

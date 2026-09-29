@@ -1,12 +1,19 @@
 import os
-import pymysql
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
+    import pymysql
+except ImportError:
+    pymysql = None
+
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from inference import pan_ocr_inference
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = FastAPI()
 
@@ -25,15 +32,23 @@ DB_CONFIG = {
     "password": os.environ.get("MYSQL_PASSWORD", "RootPass123"),
     "database": os.environ.get("MYSQL_DATABASE", "pan_ocr"),
     "port":     int(os.environ.get("MYSQL_PORT",  3306)),
-    "cursorclass": pymysql.cursors.DictCursor
+    "cursorclass": pymysql.cursors.DictCursor if pymysql else None
 }
 
 def get_db():
-    return pymysql.connect(**DB_CONFIG)
+    if pymysql is None:
+        return None
+    try:
+        return pymysql.connect(**DB_CONFIG)
+    except Exception as e:
+        print(f"[DB CONNECT ERROR] {e}")
+        return None
 
 def save_to_db(results):
     try:
         conn = get_db()
+        if not conn:
+            return
         with conn.cursor() as cursor:
             for r in results:
                 cursor.execute("""
@@ -136,6 +151,8 @@ async def predict_bulk(images: List[UploadFile] = File(...)):
 def get_scans():
     try:
         conn = get_db()
+        if not conn:
+            return {"total": 0, "scans": []}
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM scan_results ORDER BY scanned_at DESC"
@@ -150,6 +167,8 @@ def get_scans():
 def get_scan_by_pan(pan_number: str):
     try:
         conn = get_db()
+        if not conn:
+            return {"total": 0, "scans": []}
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM scan_results WHERE pan_number = %s ORDER BY scanned_at DESC",
@@ -165,6 +184,8 @@ def get_scan_by_pan(pan_number: str):
 def delete_scan(scan_id: int):
     try:
         conn = get_db()
+        if not conn:
+            return {"message": "Database not connected"}
         with conn.cursor() as cursor:
             cursor.execute(
                 "DELETE FROM scan_results WHERE id = %s", (scan_id,)

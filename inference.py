@@ -13,7 +13,6 @@ sys.path.append(current_dir)
 
 from preprocess import preprocess_pan_image, is_bad_text, skew_correction
 from postprocess import correct_ocr_errors, regex_validate
-from ultralytics import YOLO
 
 # --- CONFIGURATION ---
 YOLO_ONNX_PATH = os.path.join(current_dir, "models/yolo_field_detector.onnx")
@@ -40,8 +39,10 @@ def get_yolo_model():
     global _cached_yolo
     if _cached_yolo is None:
         if os.path.exists(YOLO_ONNX_PATH):
-            _cached_yolo = YOLO(YOLO_ONNX_PATH, task="detect")
+            import onnxruntime as ort
+            _cached_yolo = ort.InferenceSession(YOLO_ONNX_PATH)
         elif os.path.exists(YOLO_MODEL_PATH):
+            from ultralytics import YOLO
             _cached_yolo = YOLO(YOLO_MODEL_PATH)
         else:
             raise FileNotFoundError("YOLO model not found")
@@ -103,35 +104,85 @@ def decode_prediction(prediction):
     return text_results
 
 def run_yolo_detection(image, yolo_model, class_names):
+    if hasattr(yolo_model, "run"):
+        # Pure ONNX Runtime detection without PyTorch/Ultralytics
+        h, w = image.shape[:2]
+        scale = min(640 / h, 640 / w)
+        nw, nh = int(w * scale), int(h * scale)
+        resized = cv2.resize(image, (nw, nh))
+        padded = np.zeros((640, 640, 3), dtype=np.uint8)
+        dx = (640 - nw) // 2
+        dy = (640 - nh) // 2
+        padded[dy:dy+nh, dx:dx+nw] = resized
 
-    #Run YOLO Detection
-    results_list = yolo_model(image)  # Returns a list of Results objects
-    results = results_list[0]  # Get the Results object for the image
+        blob = padded.astype(np.float32) / 255.0
+        blob = np.transpose(blob, (2, 0, 1))
+        blob = np.expand_dims(blob, axis=0)
 
-    #Extract detection data
-    boxes = results.boxes.xyxy.cpu().numpy()   # Bounding boxes (N, 4)
-    confs = results.boxes.conf.cpu().numpy()   # Confidence scores (N,)
-    classes = results.boxes.cls.cpu().numpy()  # Class indices (N,)
+        input_name = yolo_model.get_inputs()[0].name
+        out = yolo_model.run(None, {input_name: blob})[0][0]
+        out = np.transpose(out)
 
-    crops = {}
+        boxes = []
+        confidences = []
+        class_ids = []
 
-    # Keep only the highest confidence box per class
-    best_boxes = {}
-    for idx, class_idx in enumerate(classes):
-        class_idx = int(class_idx)
-        conf = confs[idx]
-        box = boxes[idx]
-        if class_idx not in best_boxes or conf > best_boxes[class_idx][1]:
-            best_boxes[class_idx] = (box, conf)
+        for row in out:
+            classes_scores = row[4:]
+            cls_id = int(np.argmax(classes_scores))
+            score = float(classes_scores[cls_id])
+            if score > 0.25:
+                cx, cy, bw, bh = row[:4]
+                x1 = int(((cx - bw / 2) - dx) / scale)
+                y1 = int(((cy - bh / 2) - dy) / scale)
+                bw_orig = int(bw / scale)
+                bh_orig = int(bh / scale)
+                boxes.append([x1, y1, bw_orig, bh_orig])
+                confidences.append(score)
+                class_ids.append(cls_id)
 
-    # Crop images for the best boxes
-    for class_idx, (box, conf) in best_boxes.items():
-        x1, y1, x2, y2 = map(int, box)
-        class_name = class_names[class_idx]
-        crop = image[y1:y2, x1:x2]
-        crops[class_name] = crop
+        crops = {}
+        if boxes:
+            indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.25, 0.45)
+            best_boxes = {}
+            for i in indices:
+                idx = i[0] if isinstance(i, (list, tuple, np.ndarray)) else i
+                cid = class_ids[idx]
+                conf = confidences[idx]
+                box = boxes[idx]
+                if cid not in best_boxes or conf > best_boxes[cid][1]:
+                    best_boxes[cid] = (box, conf)
 
-    return crops
+            for cid, (box, conf) in best_boxes.items():
+                if cid < len(class_names):
+                    x1, y1, bw, bh = box
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+                    x2 = min(w, x1 + bw)
+                    y2 = min(h, y1 + bh)
+                    cname = class_names[cid]
+                    crops[cname] = image[y1:y2, x1:x2]
+        return crops
+    else:
+        # Fallback for PyTorch Ultralytics model
+        results_list = yolo_model(image)
+        results = results_list[0]
+        boxes = results.boxes.xyxy.cpu().numpy()
+        confs = results.boxes.conf.cpu().numpy()
+        classes = results.boxes.cls.cpu().numpy()
+        crops = {}
+        best_boxes = {}
+        for idx, class_idx in enumerate(classes):
+            class_idx = int(class_idx)
+            conf = confs[idx]
+            box = boxes[idx]
+            if class_idx not in best_boxes or conf > best_boxes[class_idx][1]:
+                best_boxes[class_idx] = (box, conf)
+        for class_idx, (box, conf) in best_boxes.items():
+            x1, y1, x2, y2 = map(int, box)
+            class_name = class_names[class_idx]
+            crops[class_name] = image[y1:y2, x1:x2]
+        return crops
 
 def save_crops(crops, output_dir):
     os.makedirs(output_dir, exist_ok=True)

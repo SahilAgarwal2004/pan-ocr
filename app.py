@@ -25,9 +25,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import sqlite3
+
+SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pan_ocr.db")
+
 # ── DB CONFIG ──
 DB_CONFIG = {
-    "host":     os.environ.get("MYSQL_HOST",     "mysql-service"),
+    "host":     os.environ.get("MYSQL_HOST"),
     "user":     os.environ.get("MYSQL_USER",     "root"),
     "password": os.environ.get("MYSQL_PASSWORD", "RootPass123"),
     "database": os.environ.get("MYSQL_DATABASE", "pan_ocr"),
@@ -35,46 +39,111 @@ DB_CONFIG = {
     "cursorclass": pymysql.cursors.DictCursor if pymysql else None
 }
 
-def get_db():
-    if pymysql is None:
-        return None
+def init_db():
+    if os.environ.get("MYSQL_HOST") and pymysql:
+        try:
+            conn = pymysql.connect(**DB_CONFIG)
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS scan_results (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        filename VARCHAR(255) NOT NULL,
+                        pan_number VARCHAR(10),
+                        name VARCHAR(255),
+                        father_name VARCHAR(255),
+                        dob VARCHAR(20),
+                        is_pan_card BOOLEAN DEFAULT TRUE,
+                        confidence FLOAT,
+                        status VARCHAR(50),
+                        error_msg TEXT,
+                        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+            conn.commit()
+            conn.close()
+            return "mysql"
+        except Exception as e:
+            print(f"[MYSQL INIT ERROR - FALLING BACK TO SQLITE]: {e}")
+
     try:
-        return pymysql.connect(**DB_CONFIG)
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS scan_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT NOT NULL,
+                pan_number TEXT,
+                name TEXT,
+                father_name TEXT,
+                dob TEXT,
+                is_pan_card BOOLEAN DEFAULT 1,
+                confidence REAL,
+                status TEXT,
+                error_msg TEXT,
+                scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+        conn.close()
+        return "sqlite"
     except Exception as e:
-        print(f"[DB CONNECT ERROR] {e}")
+        print(f"[SQLITE INIT ERROR]: {e}")
         return None
 
+# Initialize on startup
+init_db()
+
 def save_to_db(results):
+    db_mode = init_db()
+    if not db_mode:
+        return
     try:
-        conn = get_db()
-        if not conn:
-            return
-        with conn.cursor() as cursor:
+        if db_mode == "mysql":
+            conn = pymysql.connect(**DB_CONFIG)
+            with conn.cursor() as cursor:
+                for r in results:
+                    cursor.execute("""
+                        INSERT INTO scan_results
+                            (filename, pan_number, name, father_name,
+                             dob, is_pan_card, confidence, status, error_msg)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        r.get("filename", ""),
+                        r.get("pan_number", ""),
+                        r.get("name", ""),
+                        r.get("father_name", ""),
+                        r.get("dob", ""),
+                        r.get("is_pan_card", True),
+                        r.get("confidence", 0.0),
+                        r.get("status", "success"),
+                        r.get("error", "")
+                    ))
+            conn.commit()
+            conn.close()
+        else:
+            conn = sqlite3.connect(SQLITE_DB_PATH)
+            cursor = conn.cursor()
             for r in results:
                 cursor.execute("""
                     INSERT INTO scan_results
                         (filename, pan_number, name, father_name,
                          dob, is_pan_card, confidence, status, error_msg)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    r.get("filename",    ""),
-                    r.get("pan_number",  ""),
-                    r.get("name",        ""),
+                    r.get("filename", ""),
+                    r.get("pan_number", ""),
+                    r.get("name", ""),
                     r.get("father_name", ""),
-                    r.get("dob",         ""),
-                    r.get("is_pan_card", True),
-                    r.get("confidence",  0.0),
-                    r.get("status",      "success"),
-                    r.get("error",       "")
+                    r.get("dob", ""),
+                    1 if r.get("is_pan_card", True) else 0,
+                    r.get("confidence", 0.0),
+                    r.get("status", "success"),
+                    r.get("error", "")
                 ))
-        conn.commit()
-    except Exception as e:
-        print(f"[DB ERROR] {e}")
-    finally:
-        try:
+            conn.commit()
             conn.close()
-        except:
-            pass
+    except Exception as e:
+        print(f"[SAVE DB ERROR]: {e}")
 
 # ── ROUTES ──
 
@@ -161,51 +230,62 @@ async def predict_bulk(images: List[UploadFile] = File(...)):
         "results": results
     }
 
+def fetch_scans(pan_number=None):
+    db_mode = init_db()
+    if db_mode == "mysql":
+        conn = pymysql.connect(**DB_CONFIG)
+        with conn.cursor() as cur:
+            if pan_number:
+                cur.execute("SELECT * FROM scan_results WHERE pan_number = %s ORDER BY scanned_at DESC", (pan_number,))
+            else:
+                cur.execute("SELECT * FROM scan_results ORDER BY scanned_at DESC")
+            rows = cur.fetchall()
+        conn.close()
+        return rows
+    else:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if pan_number:
+            cur.execute("SELECT * FROM scan_results WHERE pan_number = ? ORDER BY scanned_at DESC", (pan_number,))
+        else:
+            cur.execute("SELECT * FROM scan_results ORDER BY scanned_at DESC")
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+
 @app.get("/scans")
 def get_scans():
     try:
-        conn = get_db()
-        if not conn:
-            return {"total": 0, "scans": []}
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM scan_results ORDER BY scanned_at DESC"
-            )
-            rows = cursor.fetchall()
-        conn.close()
+        rows = fetch_scans()
         return {"total": len(rows), "scans": rows}
     except Exception as e:
-        return {"error": str(e)}
+        return {"total": 0, "scans": [], "error": str(e)}
 
 @app.get("/scans/{pan_number}")
 def get_scan_by_pan(pan_number: str):
     try:
-        conn = get_db()
-        if not conn:
-            return {"total": 0, "scans": []}
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM scan_results WHERE pan_number = %s ORDER BY scanned_at DESC",
-                (pan_number,)
-            )
-            rows = cursor.fetchall()
-        conn.close()
+        rows = fetch_scans(pan_number)
         return {"total": len(rows), "scans": rows}
     except Exception as e:
-        return {"error": str(e)}
+        return {"total": 0, "scans": [], "error": str(e)}
 
 @app.delete("/scans/{scan_id}")
 def delete_scan(scan_id: int):
     try:
-        conn = get_db()
-        if not conn:
-            return {"message": "Database not connected"}
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM scan_results WHERE id = %s", (scan_id,)
-            )
-        conn.commit()
-        conn.close()
+        db_mode = init_db()
+        if db_mode == "mysql":
+            conn = pymysql.connect(**DB_CONFIG)
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM scan_results WHERE id = %s", (scan_id,))
+            conn.commit()
+            conn.close()
+        else:
+            conn = sqlite3.connect(SQLITE_DB_PATH)
+            cur = conn.cursor()
+            cur.execute("DELETE FROM scan_results WHERE id = ?", (scan_id,))
+            conn.commit()
+            conn.close()
         return {"message": f"Scan #{scan_id} deleted"}
     except Exception as e:
         return {"error": str(e)}

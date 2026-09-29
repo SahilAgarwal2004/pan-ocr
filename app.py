@@ -26,8 +26,38 @@ app.add_middleware(
 )
 
 import sqlite3
+import threading
+import time
+import urllib.request
 
 SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pan_ocr.db")
+
+# ── KEEP ALIVE WORKER ──
+def _start_keep_alive():
+    """Background daemon to ping public URL periodically and prevent Render idle spindown"""
+    ping_url = os.environ.get("RENDER_EXTERNAL_URL", "https://pan-ocr-backend.onrender.com").rstrip("/") + "/health"
+    def _worker():
+        # Wait 3 minutes before beginning periodic pings
+        time.sleep(180)
+        while True:
+            try:
+                req = urllib.request.Request(
+                    ping_url,
+                    headers={"User-Agent": "Render-KeepAlive/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    if resp.status == 200:
+                        print(f"[KEEP-ALIVE] Heartbeat ping successful: {ping_url}")
+            except Exception as e:
+                print(f"[KEEP-ALIVE] Heartbeat error: {e}")
+            # Ping every 10 minutes (600 seconds) - safely before Render's 15-minute idle limit
+            time.sleep(600)
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+if os.environ.get("ENABLE_KEEP_ALIVE", "true").lower() in ("true", "1", "yes"):
+    _start_keep_alive()
 
 # ── DB CONFIG ──
 DB_CONFIG = {

@@ -1082,6 +1082,7 @@ async function checkApi() {
   }
 }
 checkApi();
+setInterval(checkApi, 300000); // 5-minute heartbeat to keep Render backend warm
 
 /* ══════════════════════════
    SCANNER

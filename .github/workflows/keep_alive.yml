@@ -1,0 +1,17 @@
+name: Render Backend Keep Alive Watchdog
+
+on:
+  schedule:
+    # Run every 14 minutes (Render free tier powers down after 15 minutes of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep_alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend Health Endpoint
+        run: |
+          echo "Pinging https://pan-ocr-backend.onrender.com/health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://pan-ocr-backend.onrender.com/health" || echo "failed")
+          echo "Response HTTP Status: $HTTP_STATUS"

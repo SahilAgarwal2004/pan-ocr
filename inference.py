@@ -2,12 +2,7 @@ import os
 import cv2
 import json
 import numpy as np
-import torch
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-import json
 import string
-from ultralytics import YOLO
 import time
 import io
 import sys
@@ -16,15 +11,17 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
-# Now import your modules
 from preprocess import preprocess_pan_image, is_bad_text, skew_correction
 from postprocess import correct_ocr_errors, regex_validate
-
+from ultralytics import YOLO
 
 # --- CONFIGURATION ---
-YOLO_MODEL_PATH = "models/yolo_field_detector.pt"  
-OCR_MODEL_PATH = "models/custom_ocr_model.keras"  
-CROPPED_OUTPUTS_DIR = "development/ocr_model/cropped_outputs"
+YOLO_ONNX_PATH = os.path.join(current_dir, "models/yolo_field_detector.onnx")
+OCR_ONNX_PATH = os.path.join(current_dir, "models/custom_ocr_model.onnx")
+YOLO_MODEL_PATH = os.path.join(current_dir, "models/yolo_field_detector.pt")
+OCR_MODEL_PATH = os.path.join(current_dir, "models/custom_ocr_model.keras")
+CROPPED_OUTPUTS_DIR = os.path.join(current_dir, "development/ocr_model/cropped_outputs")
+
 CLASSES = ['DOB', 'Father Name', 'Name', 'PAN', 'PAN Number', 'Photo', 'QR', 'Signature']
 OCR_CLASSES = ["DOB", "PAN Number", "Name", "Father Name"]  
 IMG_HEIGHT = 64
@@ -34,6 +31,43 @@ IMG_WIDTH = 256
 CHARACTERS = string.ascii_uppercase + string.digits + "/" + " "
 NUM_TO_CHAR = {idx: char for idx, char in enumerate(CHARACTERS)}
 VOCAB_SIZE = len(CHARACTERS) + 1 
+
+# --- MODEL CACHING ---
+_cached_yolo = None
+_cached_ocr = None
+
+def get_yolo_model():
+    global _cached_yolo
+    if _cached_yolo is None:
+        if os.path.exists(YOLO_ONNX_PATH):
+            _cached_yolo = YOLO(YOLO_ONNX_PATH, task="detect")
+        elif os.path.exists(YOLO_MODEL_PATH):
+            _cached_yolo = YOLO(YOLO_MODEL_PATH)
+        else:
+            raise FileNotFoundError("YOLO model not found")
+    return _cached_yolo
+
+def get_ocr_model():
+    global _cached_ocr
+    if _cached_ocr is None:
+        if os.path.exists(OCR_ONNX_PATH):
+            import onnxruntime as ort
+            _cached_ocr = ort.InferenceSession(OCR_ONNX_PATH)
+        elif os.path.exists(OCR_MODEL_PATH):
+            from tensorflow.keras.models import load_model
+            _cached_ocr = load_model(OCR_MODEL_PATH, compile=False)
+        else:
+            raise FileNotFoundError("OCR model not found")
+    return _cached_ocr
+
+def run_ocr_forward(ocr_model, proc_img):
+    if hasattr(ocr_model, "run"):
+        # ONNX Runtime InferenceSession
+        input_name = ocr_model.get_inputs()[0].name
+        return ocr_model.run(None, {input_name: proc_img})[0]
+    else:
+        # Keras model
+        return ocr_model.predict(proc_img, verbose=0)
 
 def preprocess_for_ocr(image, img_height=64, img_width=256):
     # Step 1: Custom preprocessing 
@@ -54,20 +88,18 @@ def preprocess_for_ocr(image, img_height=64, img_width=256):
     return processed_image
 
 def decode_prediction(prediction):
-    input_length = np.ones(prediction.shape[0]) * prediction.shape[1]
-    decoded, _ = tf.keras.backend.ctc_decode(prediction, input_length, greedy=True)
-    decoded_tensor = decoded[0]
-
-    # If decoded_tensor is already dense, use it directly; if it's SparseTensor, convert to dense
-    if isinstance(decoded_tensor, tf.SparseTensor):
-        dense_decoded = tf.sparse.to_dense(decoded_tensor).numpy()
-    else:
-        dense_decoded = decoded_tensor.numpy() if hasattr(decoded_tensor, "numpy") else np.array(decoded_tensor)
-
+    # Greedy CTC decode using numpy
     text_results = []
-    for sequence in dense_decoded:
-        text = "".join([NUM_TO_CHAR[idx] for idx in sequence if idx != -1 and idx in NUM_TO_CHAR])
-        text_results.append(text)
+    for pred_seq in prediction:
+        best_indices = np.argmax(pred_seq, axis=-1)
+        collapsed = []
+        prev = None
+        for idx in best_indices:
+            if idx != prev:
+                if idx != 38 and idx in NUM_TO_CHAR:
+                    collapsed.append(NUM_TO_CHAR[idx])
+                prev = idx
+        text_results.append(''.join(collapsed))
     return text_results
 
 def run_yolo_detection(image, yolo_model, class_names):
@@ -122,7 +154,7 @@ def align_and_ocr_field(crop_img, ocr_model, preprocess_for_ocr, decode_predicti
     if proc_img is None:
         return "", "Image was rotated" if was_rotated else "No rotation"
     proc_img = np.expand_dims(proc_img, axis=0)
-    pred = ocr_model.predict(proc_img)
+    pred = run_ocr_forward(ocr_model, proc_img)
     text_0 = decode_prediction(pred)[0]
 
     # Step 3: Check OCR quality
@@ -135,7 +167,7 @@ def align_and_ocr_field(crop_img, ocr_model, preprocess_for_ocr, decode_predicti
     if proc_img_180 is None:
         return text_0, "Image was rotated" if was_rotated else "No rotation"
     proc_img_180 = np.expand_dims(proc_img_180, axis=0)
-    pred_180 = ocr_model.predict(proc_img_180)
+    pred_180 = run_ocr_forward(ocr_model, proc_img_180)
     text_180 = decode_prediction(pred_180)[0]
 
     # Return the better result
@@ -195,9 +227,9 @@ def pan_ocr_inference(image_bytes):
     if img is None:
         raise ValueError("Invalid image format")
     
-    # Load models 
-    yolo_model = YOLO(YOLO_MODEL_PATH)
-    ocr_model = load_model(OCR_MODEL_PATH, compile=False)
+    # Load models (cached)
+    yolo_model = get_yolo_model()
+    ocr_model = get_ocr_model()
     
     # Run detection and cropping
     crops = run_yolo_detection(img, yolo_model, CLASSES)
@@ -213,10 +245,9 @@ def main(image_path):
     # Start total timer
     total_start = time.time()
 
-    # Load YOLO model
-    yolo_model = YOLO(YOLO_MODEL_PATH)
-    # Load OCR model
-    ocr_model = load_model(OCR_MODEL_PATH, compile=False)
+    # Load models
+    yolo_model = get_yolo_model()
+    ocr_model = get_ocr_model()
 
     # Step 1: Read image
     img = cv2.imread(image_path)

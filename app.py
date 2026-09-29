@@ -32,6 +32,46 @@ import urllib.request
 
 SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pan_ocr.db")
 
+# ── ENCRYPTION LAYER ──
+import base64
+import hashlib
+try:
+    from cryptography.fernet import Fernet
+except ImportError:
+    Fernet = None
+
+def get_cipher():
+    if not Fernet:
+        return None
+    raw_key = os.environ.get("ENCRYPTION_KEY", "pan-ocr-encryption-secure-master-key-2026")
+    derived = hashlib.sha256(raw_key.encode("utf-8")).digest()
+    return Fernet(base64.urlsafe_b64encode(derived))
+
+def encrypt_val(val: str) -> str:
+    """Encrypts sensitive field using AES/Fernet encryption."""
+    if not val:
+        return ""
+    try:
+        f = get_cipher()
+        if not f:
+            return val
+        return f.encrypt(val.encode("utf-8")).decode("utf-8")
+    except Exception as e:
+        print(f"[ENCRYPT ERROR]: {e}")
+        return val
+
+def decrypt_val(cipher_str: str) -> str:
+    """Decrypts ciphertext back to plaintext with legacy fallback."""
+    if not cipher_str:
+        return ""
+    try:
+        f = get_cipher()
+        if not f:
+            return cipher_str
+        return f.decrypt(cipher_str.encode("utf-8")).decode("utf-8")
+    except Exception:
+        return cipher_str
+
 # ── KEEP ALIVE WORKER ──
 def _start_keep_alive():
     """Background daemon to ping public URL periodically and prevent Render idle spindown"""
@@ -78,9 +118,9 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS scan_results (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         filename VARCHAR(255) NOT NULL,
-                        pan_number VARCHAR(10),
+                        pan_number TEXT,
                         name VARCHAR(255),
-                        father_name VARCHAR(255),
+                        father_name TEXT,
                         dob VARCHAR(20),
                         is_pan_card BOOLEAN DEFAULT TRUE,
                         confidence FLOAT,
@@ -139,9 +179,9 @@ def save_to_db(results):
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         r.get("filename", ""),
-                        r.get("pan_number", ""),
+                        encrypt_val(r.get("pan_number", "")),
                         r.get("name", ""),
-                        r.get("father_name", ""),
+                        encrypt_val(r.get("father_name", "")),
                         r.get("dob", ""),
                         r.get("is_pan_card", True),
                         r.get("confidence", 0.0),
@@ -161,9 +201,9 @@ def save_to_db(results):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     r.get("filename", ""),
-                    r.get("pan_number", ""),
+                    encrypt_val(r.get("pan_number", "")),
                     r.get("name", ""),
-                    r.get("father_name", ""),
+                    encrypt_val(r.get("father_name", "")),
                     r.get("dob", ""),
                     1 if r.get("is_pan_card", True) else 0,
                     r.get("confidence", 0.0),
@@ -262,16 +302,16 @@ async def predict_bulk(images: List[UploadFile] = File(...)):
 
 def fetch_scans(pan_number=None):
     db_mode = init_db()
+    rows = []
     if db_mode == "mysql":
         conn = pymysql.connect(**DB_CONFIG)
-        with conn.cursor() as cur:
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
             if pan_number:
                 cur.execute("SELECT * FROM scan_results WHERE pan_number = %s ORDER BY scanned_at DESC", (pan_number,))
             else:
                 cur.execute("SELECT * FROM scan_results ORDER BY scanned_at DESC")
             rows = cur.fetchall()
         conn.close()
-        return rows
     else:
         conn = sqlite3.connect(SQLITE_DB_PATH)
         conn.row_factory = sqlite3.Row
@@ -282,7 +322,24 @@ def fetch_scans(pan_number=None):
             cur.execute("SELECT * FROM scan_results ORDER BY scanned_at DESC")
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
-        return rows
+
+    # Mask sensitive details with * and # so only #, File, Name, DOB, Scanned At, Status are in plaintext
+    formatted = []
+    for r in rows:
+        has_pan = bool(r.get("pan_number"))
+        has_father = bool(r.get("father_name"))
+        formatted.append({
+            "id": r.get("id"),
+            "filename": r.get("filename", ""),
+            "name": r.get("name", ""),
+            "dob": r.get("dob", ""),
+            "scanned_at": str(r.get("scanned_at") or ""),
+            "status": r.get("status", "success"),
+            "pan_number": "**********" if has_pan else "",
+            "father_name": "##########" if has_father else "",
+            "is_encrypted": True
+        })
+    return formatted
 
 @app.get("/scans")
 def get_scans():
@@ -292,13 +349,39 @@ def get_scans():
     except Exception as e:
         return {"total": 0, "scans": [], "error": str(e)}
 
-@app.get("/scans/{pan_number}")
-def get_scan_by_pan(pan_number: str):
+@app.get("/scans/{scan_id}/reveal")
+def reveal_scan(scan_id: int):
+    """Decrypts and reveals sensitive details for a specific record"""
     try:
-        rows = fetch_scans(pan_number)
-        return {"total": len(rows), "scans": rows}
+        db_mode = init_db()
+        row = None
+        if db_mode == "mysql":
+            conn = pymysql.connect(**DB_CONFIG)
+            with conn.cursor(pymysql.cursors.DictCursor) as cur:
+                cur.execute("SELECT * FROM scan_results WHERE id = %s", (scan_id,))
+                row = cur.fetchone()
+            conn.close()
+        else:
+            conn = sqlite3.connect(SQLITE_DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM scan_results WHERE id = ?", (scan_id,))
+            res = cur.fetchone()
+            row = dict(res) if res else None
+            conn.close()
+
+        if not row:
+            return {"error": "Scan not found"}
+
+        dec_pan = decrypt_val(row.get("pan_number", ""))
+        dec_father = decrypt_val(row.get("father_name", ""))
+        return {
+            "id": row.get("id"),
+            "pan_number": dec_pan,
+            "father_name": dec_father
+        }
     except Exception as e:
-        return {"total": 0, "scans": [], "error": str(e)}
+        return {"error": str(e)}
 
 @app.delete("/scans/{scan_id}")
 def delete_scan(scan_id: int):

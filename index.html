@@ -637,6 +637,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hi
 .row-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:100px;font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
 .row-ok{background:var(--green-l);border:1px solid rgba(13,156,106,0.2);color:var(--green)}
 .row-err{background:var(--red-l);border:1px solid rgba(217,48,37,0.2);color:var(--red)}
+.mask-wrap{display:inline-flex;align-items:center;gap:6px}
+.mask-code{font-family:var(--mono);font-size:0.75rem;letter-spacing:1.5px;color:var(--ink-muted);background:var(--bg2);padding:2px 7px;border-radius:4px;border:1px solid var(--border)}
+.mask-code.revealed{color:var(--blue);letter-spacing:0.04em;font-weight:700;background:rgba(26,115,232,0.08);border-color:rgba(26,115,232,0.3)}
+.reveal-btn{background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:0.68rem;color:var(--ink-muted);transition:all 0.15s;line-height:1}
+.reveal-btn:hover{background:var(--card);color:var(--accent);border-color:var(--accent)}
 
 /* ══════════════════════════
    HISTORY PAGE
@@ -966,18 +971,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hi
   <div class="page-header">
     <div class="breadcrumb"><span onclick="go('home')" style="cursor:pointer">Overview</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-cur">History</span></div>
     <div class="page-title">Scan History</div>
-    <div class="page-subtitle">All extractions saved to the database</div>
+    <div class="page-subtitle">Encrypted storage — sensitive details are encrypted at rest with AES-256 and masked with * / #</div>
   </div>
   <div class="history-layout">
     <div class="history-toolbar">
-      <input class="search-inp" id="hist-search" type="text" placeholder="Search by PAN number or name…" oninput="filterHistory()"/>
+      <input class="search-inp" id="hist-search" type="text" placeholder="Search by name or file…" oninput="filterHistory()"/>
       <button class="history-refresh" onclick="loadHistory()">↻ Refresh</button>
       <button class="history-export" onclick="exportHistoryCSV()">📥 Export All</button>
     </div>
     <div id="history-content">
       <div class="results-card show" style="display:block;">
         <div class="results-head">
-          <div class="results-head-title">All Scans</div>
+          <div class="results-head-title">All Scans <span style="font-size:0.75rem;font-weight:normal;color:var(--ink-muted);margin-left:8px;">🔒 PII Encrypted (* / # Masked)</span></div>
           <div id="hist-chips"></div>
         </div>
         <div class="res-table-wrap">
@@ -986,9 +991,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow-x:hi
               <tr>
                 <th>#</th>
                 <th>File</th>
-                <th>PAN Number</th>
+                <th>PAN Number 🔒</th>
                 <th>Name</th>
-                <th>Father's Name</th>
+                <th>Father's Name 🔒</th>
                 <th>Date of Birth</th>
                 <th>Scanned At</th>
                 <th>Status</th>
@@ -1352,6 +1357,7 @@ function exportCSV() {
    HISTORY
 ══════════════════════════ */
 let allHistory = [];
+const revealedCache = {};
 
 async function loadHistory() {
   const tbody = document.getElementById('hist-tbody');
@@ -1363,7 +1369,8 @@ async function loadHistory() {
     const data = await r.json();
     allHistory = data.scans || [];
     document.getElementById('hist-chips').innerHTML =
-      `<span class="chip chip-neutral">📋 ${allHistory.length} records</span>`;
+      `<span class="chip chip-neutral">📋 ${allHistory.length} records</span>` +
+      `<span class="chip chip-neutral" style="color:var(--green);border-color:rgba(13,156,106,0.3)">🔒 AES Encrypted</span>`;
     renderHistory(allHistory);
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--red);font-size:0.82rem;">Could not load scan history from ${esc(targetBase)}/scans — make sure the backend is awake</td></tr>`;
@@ -1375,29 +1382,86 @@ function renderHistory(rows) {
   if (!rows || !rows.length) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--ink-muted);font-size:0.82rem;">No records found</td></tr>`; return; }
   tbody.innerHTML = rows.map(r => `<tr>
     <td style="font-family:var(--mono);font-size:0.68rem;color:var(--ink-muted)">#${r.id}</td>
-    <td class="td-file">${esc(r.filename||'')}</td>
-    <td class="${r.pan_number?'td-pan':''}">${esc(r.pan_number||'') || `<span class="td-empty">—</span>`}</td>
+    <td class="td-file" title="${esc(r.filename||'')}">${esc(r.filename||'')}</td>
+    <td>
+      <div class="mask-wrap">
+        <span class="mask-code" id="pan-txt-${r.id}" title="Encrypted at rest with AES/Fernet">${esc(r.pan_number || '**********')}</span>
+        <button class="reveal-btn" id="pan-btn-${r.id}" onclick="toggleReveal(${r.id}, 'pan')" title="Toggle Decrypt">👁</button>
+      </div>
+    </td>
     <td class="${r.name?'td-name':''}">${esc(r.name||'') || `<span class="td-empty">—</span>`}</td>
-    <td>${esc(r.father_name||'') || `<span class="td-empty">—</span>`}</td>
+    <td>
+      <div class="mask-wrap">
+        <span class="mask-code" id="father-txt-${r.id}" title="Encrypted at rest with AES/Fernet">${esc(r.father_name || '##########')}</span>
+        <button class="reveal-btn" id="father-btn-${r.id}" onclick="toggleReveal(${r.id}, 'father')" title="Toggle Decrypt">👁</button>
+      </div>
+    </td>
     <td>${esc(r.dob||'') || `<span class="td-empty">—</span>`}</td>
     <td style="font-size:0.68rem;font-family:var(--mono);color:var(--ink-muted)">${r.scanned_at ? esc(String(r.scanned_at).slice(0,16)) : ''}</td>
     <td><span class="row-badge ${r.status==='error'?'row-err':'row-ok'}">${r.status==='error'?'✗ Error':'✓ Done'}</span></td>
   </tr>`).join('');
 }
 
+async function toggleReveal(id, field) {
+  const span = document.getElementById(`${field}-txt-${id}`);
+  const btn  = document.getElementById(`${field}-btn-${id}`);
+  if (!span) return;
+
+  const isMasked = span.textContent.includes('*') || span.textContent.includes('#');
+  if (!isMasked) {
+    span.textContent = field === 'pan' ? '**********' : '##########';
+    span.classList.remove('revealed');
+    if (btn) btn.textContent = '👁';
+    return;
+  }
+
+  if (revealedCache[id]) {
+    const val = revealedCache[id][field === 'pan' ? 'pan_number' : 'father_name'];
+    span.textContent = val || '—';
+    span.classList.add('revealed');
+    if (btn) btn.textContent = '🙈';
+    return;
+  }
+
+  span.textContent = 'Decrypting…';
+  const targetBase = (apiUrl || histApiUrl || DEFAULT_API_BASE).replace(/\/predict.*$/, '').replace(/\/scans.*$/, '');
+  try {
+    const res = await fetch(`${targetBase}/scans/${id}/reveal`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    revealedCache[id] = data;
+    const val = data[field === 'pan' ? 'pan_number' : 'father_name'];
+    span.textContent = val || '—';
+    span.classList.add('revealed');
+    if (btn) btn.textContent = '🙈';
+  } catch(e) {
+    span.textContent = field === 'pan' ? '**********' : '##########';
+    alert('Failed to decrypt record: ' + e.message);
+  }
+}
+
 function filterHistory() {
   const q = document.getElementById('hist-search').value.toLowerCase();
   renderHistory(allHistory.filter(r =>
-    (r.pan_number||'').toLowerCase().includes(q) ||
     (r.name||'').toLowerCase().includes(q) ||
-    (r.father_name||'').toLowerCase().includes(q)
+    (r.filename||'').toLowerCase().includes(q) ||
+    (r.dob||'').toLowerCase().includes(q)
   ));
 }
 
 function exportHistoryCSV() {
-  const h = ['ID','Filename','PAN Number','Name',"Father's Name",'DOB','Scanned At','Status'];
-  const rows = allHistory.map(r=>[r.id,r.filename||'',r.pan_number||'',r.name||'',r.father_name||'',r.dob||'',r.scanned_at||'',r.status||'']);
-  dlCSV([h,...rows],'verifyiq_history_'+new Date().toISOString().slice(0,10)+'.csv');
+  const h = ['ID','Filename','PAN (Masked)','Name',"Father's Name (Masked)",'DOB','Scanned At','Status'];
+  const rows = allHistory.map(r=>[
+    r.id,
+    r.filename||'',
+    revealedCache[r.id]?.pan_number || r.pan_number || '**********',
+    r.name||'',
+    revealedCache[r.id]?.father_name || r.father_name || '##########',
+    r.dob||'',
+    r.scanned_at||'',
+    r.status||''
+  ]);
+  dlCSV([h,...rows],'verifyiq_history_encrypted_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 /* ══════════════════════════

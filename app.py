@@ -78,6 +78,20 @@ def save_to_db(results):
 
 # ── ROUTES ──
 
+@app.get("/")
+def root():
+    return {
+        "message": "PAN Card OCR Extraction System API",
+        "status": "online",
+        "endpoints": {
+            "health": "/health",
+            "docs": "/docs",
+            "predict": "/predict",
+            "predict_bulk": "/predict-bulk",
+            "scans": "/scans"
+        }
+    }
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
